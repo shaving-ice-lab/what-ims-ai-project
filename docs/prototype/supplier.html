@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供应商后台 - 供应链订货系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 240px; background: #065f46; color: #fff; padding: 20px 0; position: fixed; height: 100vh; overflow-y: auto; }
+        .sidebar-title { padding: 10px 20px; font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .sidebar-subtitle { padding: 0 20px 20px; font-size: 13px; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
+        .menu-group { margin-bottom: 10px; }
+        .menu-group-title { padding: 12px 20px 8px; font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
+        .menu-item { padding: 12px 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .menu-item:hover { background: rgba(255,255,255,0.1); }
+        .menu-item.active { background: #10b981; }
+        .menu-icon { width: 20px; text-align: center; }
+        .main-content { flex: 1; margin-left: 240px; padding: 24px; min-height: 100vh; }
+        .page-header { margin-bottom: 24px; }
+        .page-title { font-size: 24px; font-weight: 600; color: #1a1a2e; }
+        .page-subtitle { color: #666; margin-top: 4px; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; }
+        .stat-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .stat-label { font-size: 14px; color: #666; margin-bottom: 8px; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #1a1a2e; }
+        .stat-change { font-size: 12px; margin-top: 8px; }
+        .stat-change.up { color: #10b981; }
+        .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 24px; }
+        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { font-weight: 600; color: #666; font-size: 13px; background: #f9fafb; }
+        .status { padding: 4px 12px; border-radius: 20px; font-size: 12px; display: inline-block; }
+        .status.pending { background: #fef3c7; color: #d97706; }
+        .status.confirmed { background: #dbeafe; color: #2563eb; }
+        .status.delivering { background: #e0e7ff; color: #4f46e5; }
+        .status.completed { background: #d1fae5; color: #059669; }
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .btn-primary { background: #10b981; color: #fff; }
+        .btn-primary:hover { background: #059669; }
+        .btn-success { background: #10b981; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #fff; }
+        .btn-outline { background: #fff; border: 1px solid #ddd; color: #333; }
+        .btn-outline:hover { border-color: #10b981; color: #10b981; }
+        .btn-sm { padding: 4px 12px; font-size: 12px; }
+        .filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .filter-select, .filter-input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fff; }
+        .chart-placeholder { height: 200px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; margin-bottom: 6px; font-weight: 500; color: #333; }
+        .form-input, .form-select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+        .tag-green { background: #d1fae5; color: #059669; }
+        .tag-red { background: #fee2e2; color: #dc2626; }
+        .text-green { color: #10b981; }
+        .text-red { color: #ef4444; }
+        .order-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 4px solid #f59e0b; }
+        .order-card.confirmed { border-left-color: #3b82f6; }
+        .order-card.delivering { border-left-color: #8b5cf6; }
+        .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .order-store { font-weight: 600; font-size: 16px; }
+        .order-amount { font-size: 18px; font-weight: 700; color: #ef4444; }
+        .order-info { font-size: 13px; color: #666; margin-bottom: 8px; }
+        .order-actions { display: flex; gap: 8px; margin-top: 12px; }
+        .print-preview { border: 1px solid #ddd; padding: 20px; background: #fff; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <div class="sidebar">
+            <div class="sidebar-title">🏭 供应商中心</div>
+            <div class="sidebar-subtitle">鑫源食品供应</div>
+            <div class="menu-group">
+                <div class="menu-item active" onclick="showSection('dashboard', this)"><span class="menu-icon">📊</span> 订单概览</div>
+                <div class="menu-item" onclick="showSection('market', this)"><span class="menu-icon">📈</span> 市场行情</div>
+                <div class="menu-item" onclick="showSection('orders', this)"><span class="menu-icon">📋</span> 订单管理</div>
+                <div class="menu-item" onclick="showSection('print', this)"><span class="menu-icon">🖨️</span> 送货单打印</div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">物料管理</div>
+                <div class="menu-item" onclick="showSection('price', this)"><span class="menu-icon">💰</span> 价格设置</div>
+                <div class="menu-item" onclick="showSection('import', this)"><span class="menu-icon">📥</span> Excel导入</div>
+                <div class="menu-item" onclick="showSection('stock', this)"><span class="menu-icon">📦</span> 库存管理</div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">配送设置</div>
+                <div class="menu-item" onclick="showSection('delivery-time', this)"><span class="menu-icon">📅</span> 配送日/起送价</div>
+                <div class="menu-item" onclick="showSection('delivery-area', this)"><span class="menu-icon">🗺️</span> 配送区域</div>
+                <div class="menu-item" onclick="showSection('waybill', this)"><span class="menu-icon">📄</span> 运单管理 <span class="tag" style="background: #dbeafe; color: #2563eb; font-size: 10px; margin-left: auto;">快递配送</span></div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">账户</div>
+                <div class="menu-item" onclick="showSection('profile', this)"><span class="menu-icon">👤</span> 账户信息</div>
+            </div>
+        </div>
+        <div class="main-content">
+            <!-- 订单概览 -->
+            <div id="section-dashboard" class="content-section active">
+                <div class="page-header">
+                    <div class="page-title">订单概览</div>
+                    <div class="page-subtitle">今日订单情况一览</div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">待处理订单</div>
+                        <div class="stat-value text-red">12</div>
+                        <div class="stat-change">需要尽快确认</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">今日订单</div>
+                        <div class="stat-value">28</div>
+                        <div class="stat-change up">↑ 5 较昨日</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">今日销售额</div>
+                        <div class="stat-value">¥18,650</div>
+                        <div class="stat-change up">↑ 12.3%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">本月销售额</div>
+                        <div class="stat-value">¥328,500</div>
+                        <div class="stat-change up">↑ 8.6%</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">待处理订单</div>
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-store">城东旗舰店</span>
+                            <span class="order-amount">¥2,580.00</span>
+                        </div>
+                        <div class="order-info">订单号：PO202412270128 | 5件商品</div>
+                        <div class="order-info">期望配送：2024-12-28 上午</div>
+                        <div class="order-info">地址：XX市XX区城东大道88号</div>
+                        <div class="order-actions">
+                            <button class="btn btn-success">确认订单</button>
+                            <button class="btn btn-outline">查看详情</button>
+                            <button class="btn btn-outline">🖨️ 打印</button>
+                        </div>
+                    </div>
+                    <div class="order-card">
+                        <div class="order-header">
+                            <span class="order-store">万达广场店</span>
+                            <span class="order-amount">¥1,280.00</span>
+                        </div>
+                        <div class="order-info">订单号：PO202412270127 | 3件商品</div>
+                        <div class="order-info">期望配送：2024-12-28 下午</div>
+                        <div class="order-info">地址：XX市XX区万达广场B1层</div>
+                        <div class="order-actions">
+                            <button class="btn btn-success">确认订单</button>
+                            <button class="btn btn-outline">查看详情</button>
+                            <button class="btn btn-outline">🖨️ 打印</button>
+                        </div>
+                    </div>
+                    <div class="order-card confirmed">
+                        <div class="order-header">
+                            <span class="order-store">火车站店</span>
+                            <span class="order-amount">¥3,650.00</span>
+                        </div>
+                        <div class="order-info">订单号：PO202412270126 | 8件商品 | <span class="status confirmed">已确认</span></div>
+                        <div class="order-info">期望配送：2024-12-28 上午</div>
+                        <div class="order-actions">
+                            <button class="btn btn-warning">开始配送</button>
+                            <button class="btn btn-outline">查看详情</button>
+                            <button class="btn btn-outline">🖨️ 打印</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 市场行情 -->
+            <div id="section-market" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">市场行情</div>
+                    <div class="page-subtitle">查看您经营产品在当地市场的价格情况</div>
+                </div>
+                <!-- 行情说明 -->
+                <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 24px;">💡</span>
+                    <div>
+                        <div style="font-weight: 600; color: #0369a1;">市场行情数据说明</div>
+                        <div style="font-size: 13px; color: #666;">显示您经营的产品在当地（XX市）的市场最低价，帮助您了解价格定位。</div>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">您的在售产品</div>
+                        <div class="stat-value">28</div>
+                        <div class="stat-change">个SKU</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">价格最低</div>
+                        <div class="stat-value text-green">18</div>
+                        <div class="stat-change up">您的价格为市场最低</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">价格偏高</div>
+                        <div class="stat-value" style="color: #f59e0b;">10</div>
+                        <div class="stat-change">高于市场最低价</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">价格持平</div>
+                        <div class="stat-value" style="color: #3b82f6;">0</div>
+                        <div class="stat-change">与市场最低价相同</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        <span>您经营产品的市场行情</span>
+                        <div class="filters" style="margin: 0;">
+                            <select class="filter-select">
+                                <option>全部分类</option>
+                                <option>粮油类</option>
+                                <option>肉禽蛋类</option>
+                                <option>调味品</option>
+                            </select>
+                            <select class="filter-select">
+                                <option>全部状态</option>
+                                <option>价格最低</option>
+                                <option>价格偏高</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>产品名称</th>
+                                <th>品牌</th>
+                                <th>规格</th>
+                                <th>您的报价</th>
+                                <th>市场最低价</th>
+                                <th>价差</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 价格最低的产品 -->
+                            <tr style="background: #f0fdf4;">
+                                <td style="font-weight: 600;">特级面粉</td>
+                                <td><span class="tag" style="background: #fef3c7; color: #d97706;">金龙鱼</span></td>
+                                <td>25kg/袋</td>
+                                <td style="font-weight: 600; color: #059669;">¥78.00</td>
+                                <td>¥78.00</td>
+                                <td><span class="tag tag-green">最低价</span></td>
+                                <td><button class="btn btn-outline btn-sm">调价</button></td>
+                            </tr>
+                            <tr style="background: #f0fdf4;">
+                                <td style="font-weight: 600;">特级面粉</td>
+                                <td><span class="tag" style="background: #fef3c7; color: #d97706;">金龙鱼</span></td>
+                                <td>50kg/袋</td>
+                                <td style="font-weight: 600; color: #059669;">¥150.00</td>
+                                <td>¥150.00</td>
+                                <td><span class="tag tag-green">最低价</span></td>
+                                <td><button class="btn btn-outline btn-sm">调价</button></td>
+                            </tr>
+                            <!-- 价格接近的产品 -->
+                            <tr>
+                                <td style="font-weight: 600;">高筋面粉</td>
+                                <td><span class="tag" style="background: #dbeafe; color: #2563eb;">香满园</span></td>
+                                <td>25kg/袋</td>
+                                <td style="font-weight: 600;">¥82.00</td>
+                                <td>¥80.00</td>
+                                <td><span style="color: #f59e0b;">+¥2.00 (2.5%)</span></td>
+                                <td><button class="btn btn-outline btn-sm">调价</button></td>
+                            </tr>
+                            <!-- 价格偏高的产品 -->
+                            <tr style="background: #fef2f2;">
+                                <td style="font-weight: 600;">食用油</td>
+                                <td><span class="tag" style="background: #fef3c7; color: #d97706;">金龙鱼</span></td>
+                                <td>5L/桶</td>
+                                <td style="font-weight: 600; color: #ef4444;">¥95.00</td>
+                                <td>¥85.00</td>
+                                <td><span style="color: #ef4444;">+¥10.00 (11.8%)</span></td>
+                                <td><button class="btn btn-primary btn-sm">调价</button></td>
+                            </tr>
+                            <tr style="background: #fef2f2;">
+                                <td style="font-weight: 600;">白砂糖</td>
+                                <td><span class="tag" style="background: #d1fae5; color: #059669;">太古</span></td>
+                                <td>50kg/袋</td>
+                                <td style="font-weight: 600; color: #ef4444;">¥320.00</td>
+                                <td>¥280.00</td>
+                                <td><span style="color: #ef4444;">+¥40.00 (14.3%)</span></td>
+                                <td><button class="btn btn-primary btn-sm">调价</button></td>
+                            </tr>
+
+                            <tr>
+                                <td style="font-weight: 600;">鸡蛋</td>
+                                <td><span class="tag" style="background: #fef3c7; color: #d97706;">本地</span></td>
+                                <td>30枚/箱</td>
+                                <td style="font-weight: 600;">¥32.00</td>
+                                <td>¥30.00</td>
+                                <td><span style="color: #f59e0b;">+¥2.00 (6.7%)</span></td>
+                                <td><button class="btn btn-outline btn-sm">调价</button></td>
+                            </tr>
+                            <tr style="background: #f0fdf4;">
+                                <td style="font-weight: 600;">精制盐</td>
+                                <td><span class="tag" style="background: #d1fae5; color: #059669;">中盐</span></td>
+                                <td>25kg/袋</td>
+                                <td style="font-weight: 600; color: #059669;">¥42.00</td>
+                                <td>¥42.00</td>
+                                <td><span class="tag tag-green">最低价</span></td>
+                                <td><button class="btn btn-outline btn-sm">调价</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 价格调整建议 -->
+                <div class="card">
+                    <div class="card-title">💡 价格调整建议</div>
+                    <div class="grid-2">
+                        <div style="background: #fef2f2; padding: 16px; border-radius: 8px;">
+                            <div style="font-weight: 600; color: #dc2626; margin-bottom: 8px;">⚠️ 建议降价的产品</div>
+                            <div style="font-size: 13px; color: #666; margin-bottom: 12px;">以下产品价格明显高于市场，可能影响订单量</div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fecaca;">
+                                <span>食用油 金龙鱼 5L/桶</span>
+                                <span style="color: #ef4444;">建议降至 ¥88.00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                                <span>白砂糖 太古 50kg/袋</span>
+                                <span style="color: #ef4444;">建议降至 ¥290.00</span>
+                            </div>
+                        </div>
+                        <div style="background: #f0fdf4; padding: 16px; border-radius: 8px;">
+                            <div style="font-weight: 600; color: #059669; margin-bottom: 8px;">✅ 价格优势产品</div>
+                            <div style="font-size: 13px; color: #666; margin-bottom: 12px;">以下产品您的价格最具竞争力，保持优势</div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #bbf7d0;">
+                                <span>特级面粉 金龙鱼 25kg/袋</span>
+                                <span style="color: #059669;">市场最低 ¥78.00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #bbf7d0;">
+                                <span>特级面粉 金龙鱼 50kg/袋</span>
+                                <span style="color: #059669;">市场最低 ¥150.00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                                <span>精制盐 中盐 25kg/袋</span>
+                                <span style="color: #059669;">市场最低 ¥42.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 数据更新说明 -->
+                <div style="background: #f8f9fa; padding: 12px 16px; border-radius: 8px; font-size: 13px; color: #666; display: flex; justify-content: space-between; align-items: center;">
+                    <span>📅 数据更新时间：2024-12-27 14:30 | 数据范围：XX市所有供应商</span>
+                    <button class="btn btn-outline btn-sm">🔄 刷新数据</button>
+                </div>
+            </div>
+
+            <!-- 订单管理 -->
+            <div id="section-orders" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">订单管理</div>
+                    <div class="page-subtitle">管理所有订单</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        <span>订单列表</span>
+                        <button class="btn btn-outline">📥 导出Excel</button>
+                    </div>
+                    <div class="filters">
+                        <select class="filter-select">
+                            <option>全部状态</option>
+                            <option>待确认</option>
+                            <option>已确认</option>
+                            <option>配送中</option>
+                            <option>已完成</option>
+                        </select>
+                        <select class="filter-select">
+                            <option>全部门店</option>
+                            <option>城东旗舰店</option>
+                            <option>万达广场店</option>
+                            <option>火车站店</option>
+                        </select>
+                        <input type="date" class="filter-input" value="2024-12-27">
+                        <button class="btn btn-primary">搜索</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr><th>订单编号</th><th>门店</th><th>商品数</th><th>金额</th><th>期望配送</th><th>状态</th><th>操作</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>PO202412270128</td>
+                                <td>城东旗舰店</td>
+                                <td>5件</td>
+                                <td>¥2,580.00</td>
+                                <td>12-28 上午</td>
+                                <td><span class="status pending">待确认</span></td>
+                                <td>
+                                    <button class="btn btn-success btn-sm">确认</button>
+                                    <button class="btn btn-outline btn-sm">详情</button>
+                                    <button class="btn btn-outline btn-sm">🖨️</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>PO202412270127</td>
+                                <td>万达广场店</td>
+                                <td>3件</td>
+                                <td>¥1,280.00</td>
+                                <td>12-28 下午</td>
+                                <td><span class="status pending">待确认</span></td>
+                                <td>
+                                    <button class="btn btn-success btn-sm">确认</button>
+                                    <button class="btn btn-outline btn-sm">详情</button>
+                                    <button class="btn btn-outline btn-sm">🖨️</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>PO202412270126</td>
+                                <td>火车站店</td>
+                                <td>8件</td>
+                                <td>¥3,650.00</td>
+                                <td>12-28 上午</td>
+                                <td><span class="status confirmed">已确认</span></td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm">配送</button>
+                                    <button class="btn btn-outline btn-sm">详情</button>
+                                    <button class="btn btn-outline btn-sm">🖨️</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>PO202412270125</td>
+                                <td>大学城店</td>
+                                <td>4件</td>
+                                <td>¥1,920.00</td>
+                                <td>12-27 下午</td>
+                                <td><span class="status delivering">配送中</span></td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm">完成</button>
+                                    <button class="btn btn-outline btn-sm">详情</button>
+                                    <button class="btn btn-outline btn-sm">🖨️</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>PO202412270120</td>
+                                <td>老城区店</td>
+                                <td>6件</td>
+                                <td>¥2,100.00</td>
+                                <td>12-27 上午</td>
+                                <td><span class="status completed">已完成</span></td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm">详情</button>
+                                    <button class="btn btn-outline btn-sm">🖨️</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 送货单打印 -->
+            <div id="section-print" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">送货单打印</div>
+                    <div class="page-subtitle">打印订单送货单（使用管理员配置的模板）</div>
+                </div>
+                <!-- 模板信息提示 -->
+                <div style="background: #f0f9ff; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 20px;">📋</span>
+                        <div>
+                            <div style="font-weight: 600; color: #0369a1;">当前使用模板：鑫源食品供应专属模板</div>
+                            <div style="font-size: 12px; color: #666;">模板由管理员配置，包含品牌、规格等详细信息</div>
+                        </div>
+                    </div>
+                    <span class="tag tag-green">已配置</span>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">选择订单</div>
+                        <div class="filters">
+                            <select class="filter-select" style="flex: 1;">
+                                <option>今日待配送订单</option>
+                                <option>全部订单</option>
+                            </select>
+                        </div>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <div style="padding: 12px; border: 2px solid #10b981; border-radius: 8px; margin-bottom: 8px; background: #f0fdf4;">
+                                <label><input type="checkbox" checked style="margin-right: 8px;">
+                                <strong>PO202412270128</strong> - 城东旗舰店 - ¥2,580.00</label>
+                            </div>
+                            <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px;">
+                                <label><input type="checkbox" style="margin-right: 8px;">
+                                <strong>PO202412270127</strong> - 万达广场店 - ¥1,280.00</label>
+                            </div>
+                            <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px;">
+                                <label><input type="checkbox" style="margin-right: 8px;">
+                                <strong>PO202412270126</strong> - 火车站店 - ¥3,650.00</label>
+                            </div>
+                            <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px;">
+                                <label><input type="checkbox" style="margin-right: 8px;">
+                                <strong>PO202412270125</strong> - 大学城店 - ¥1,920.00</label>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px;">
+                            <button class="btn btn-primary" style="width: 100%;">🖨️ 批量打印选中订单</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">
+                            <span>打印预览</span>
+                            <button class="btn btn-outline btn-sm">🖨️ 打印</button>
+                        </div>
+                        <div class="print-preview" style="font-size: 12px;">
+                            <div style="text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 8px;">送 货 单</div>
+                            <div style="text-align: center; font-size: 14px; margin-bottom: 4px;">鑫源食品供应</div>
+                            <div style="text-align: center; font-size: 12px; color: #666; margin-bottom: 16px;">电话：138-1234-5678 | 地址：XX市XX区食品工业园A栋</div>
+                            <div style="border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 8px 0; margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span>订单编号：<strong>PO202412270128</strong></span>
+                                    <span>下单时间：2024-12-27 14:32</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>期望配送：2024-12-28 上午</span>
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <div style="margin-bottom: 4px;"><strong>收货门店：</strong>城东旗舰店</div>
+                                <div style="margin-bottom: 4px;"><strong>联系电话：</strong>138****8888</div>
+                                <div><strong>配送地址：</strong>XX市XX区城东大道88号</div>
+                            </div>
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+                                <tr style="background: #f5f5f5;">
+                                    <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">商品名称</th>
+                                    <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">品牌</th>
+                                    <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">规格</th>
+                                    <th style="border: 1px solid #ddd; padding: 6px; text-align: center;">数量</th>
+                                    <th style="border: 1px solid #ddd; padding: 6px; text-align: right;">单价</th>
+                                    <th style="border: 1px solid #ddd; padding: 6px; text-align: right;">小计</th>
+                                </tr>
+                                <tr>
+                                    <td style="border: 1px solid #ddd; padding: 6px;">特级面粉</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px;">金龙鱼</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px;">25kg/袋</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">10袋</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">¥78.00</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">¥780.00</td>
+                                </tr>
+                                <tr>
+                                    <td style="border: 1px solid #ddd; padding: 6px;">黄油</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px;">安佳</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px;">500g/块</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">20块</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">¥45.00</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">¥900.00</td>
+                                </tr>
+                                <tr>
+                                    <td style="border: 1px solid #ddd; padding: 6px;">白砂糖</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px;">太古</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px;">50kg/袋</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">3袋</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">¥300.00</td>
+                                    <td style="border: 1px solid #ddd; padding: 6px; text-align: right;">¥900.00</td>
+                                </tr>
+                            </table>
+                            <div style="text-align: right; font-size: 14px; font-weight: bold; margin-bottom: 12px; padding: 8px; background: #f9f9f9;">
+                                商品合计：<span style="color: #ef4444;">¥2,580.00</span>
+                            </div>
+                            <div style="font-size: 11px; color: #666; margin-bottom: 12px; padding: 8px; background: #f9f9f9; border-radius: 4px;">
+                                请当面验收商品，如有问题请当场提出。感谢您的支持！
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px dashed #ddd;">
+                                <div>
+                                    <div style="margin-bottom: 16px;">签收人：_________________</div>
+                                    <div>签收日期：_________________</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="width: 70px; height: 70px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999;">
+                                        供应商盖章
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 价格设置 -->
+            <div id="section-price" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">价格设置</div>
+                    <div class="page-subtitle">设置物料供货价格</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        <span>物料价格列表</span>
+                        <div>
+                            <button class="btn btn-outline">📥 导入价格</button>
+                            <button class="btn btn-outline">📤 导出价格</button>
+                        </div>
+                    </div>
+                    <div class="filters">
+                        <select class="filter-select">
+                            <option>全部分类</option>
+                            <option>粮油类</option>
+                            <option>肉禽蛋类</option>
+                            <option>调味品</option>
+                        </select>
+                        <input type="text" class="filter-input" placeholder="搜索物料名称">
+                        <button class="btn btn-primary">搜索</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr><th>物料名称</th><th>规格</th><th>分类</th><th>供货价</th><th>库存状态</th><th>更新时间</th><th>操作</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>特级面粉</td>
+                                <td>25kg/袋</td>
+                                <td>粮油类</td>
+                                <td><strong>¥78.00</strong></td>
+                                <td><span class="tag tag-green">有货</span></td>
+                                <td>2024-12-27</td>
+                                <td><button class="btn btn-outline btn-sm">编辑</button></td>
+                            </tr>
+                            <tr>
+                                <td>金龙鱼食用油</td>
+                                <td>5L/桶</td>
+                                <td>粮油类</td>
+                                <td><strong>¥89.00</strong></td>
+                                <td><span class="tag tag-green">有货</span></td>
+                                <td>2024-12-27</td>
+                                <td><button class="btn btn-outline btn-sm">编辑</button></td>
+                            </tr>
+                            <tr>
+                                <td>白砂糖</td>
+                                <td>50kg/袋</td>
+                                <td>粮油类</td>
+                                <td><strong>¥300.00</strong></td>
+                                <td><span class="tag tag-green">有货</span></td>
+                                <td>2024-12-26</td>
+                                <td><button class="btn btn-outline btn-sm">编辑</button></td>
+                            </tr>
+                            <tr>
+                                <td>黄油</td>
+                                <td>500g/块</td>
+                                <td>肉禽蛋类</td>
+                                <td><strong>¥45.00</strong></td>
+                                <td><span class="tag tag-green">有货</span></td>
+                                <td>2024-12-26</td>
+                                <td><button class="btn btn-outline btn-sm">编辑</button></td>
+                            </tr>
+                            <tr>
+                                <td>鸡蛋</td>
+                                <td>30枚/箱</td>
+                                <td>肉禽蛋类</td>
+                                <td><strong>¥32.00</strong></td>
+                                <td><span class="tag tag-red">缺货</span></td>
+                                <td>2024-12-25</td>
+                                <td><button class="btn btn-outline btn-sm">编辑</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Excel导入 -->
+            <div id="section-import" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">Excel导入</div>
+                    <div class="page-subtitle">批量导入物料价格</div>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">上传文件</div>
+                        <div style="border: 2px dashed #ddd; border-radius: 8px; padding: 40px; text-align: center; margin-bottom: 16px;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
+                            <div style="margin-bottom: 8px;">拖拽文件到此处，或点击上传</div>
+                            <div style="font-size: 12px; color: #999;">支持 .xlsx, .xls 格式</div>
+                            <button class="btn btn-outline" style="margin-top: 16px;">选择文件</button>
+                        </div>
+                        <button class="btn btn-outline" style="width: 100%;">📥 下载导入模板</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">导入说明</div>
+                        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; font-size: 14px;">
+                            <div style="margin-bottom: 12px;"><strong>模板格式要求：</strong></div>
+                            <div style="margin-bottom: 8px;">• 第1列：物料名称（必填）</div>
+                            <div style="margin-bottom: 8px;">• 第2列：规格（必填）</div>
+                            <div style="margin-bottom: 8px;">• 第3列：供货价格（必填，数字）</div>
+                            <div style="margin-bottom: 8px;">• 第4列：库存状态（选填，有货/缺货）</div>
+                            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #ddd;">
+                                <strong>注意事项：</strong>
+                                <div style="margin-top: 8px; color: #666;">• 物料名称和规格需与系统中已有物料匹配</div>
+                                <div style="color: #666;">• 价格更新后立即生效</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">导入历史</div>
+                    <table>
+                        <thead><tr><th>导入时间</th><th>文件名</th><th>记录数</th><th>成功</th><th>失败</th><th>状态</th></tr></thead>
+                        <tbody>
+                            <tr><td>2024-12-27 14:30</td><td>价格表_1227.xlsx</td><td>50</td><td>48</td><td>2</td><td><span class="tag tag-green">完成</span></td></tr>
+                            <tr><td>2024-12-26 10:15</td><td>价格更新.xlsx</td><td>35</td><td>35</td><td>0</td><td><span class="tag tag-green">完成</span></td></tr>
+                            <tr><td>2024-12-25 16:20</td><td>新品价格.xlsx</td><td>12</td><td>12</td><td>0</td><td><span class="tag tag-green">完成</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 库存管理 -->
+            <div id="section-stock" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">库存管理</div>
+                    <div class="page-subtitle">管理物料库存状态</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">库存状态</div>
+                    <table>
+                        <thead><tr><th>物料名称</th><th>规格</th><th>当前状态</th><th>操作</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td>特级面粉</td><td>25kg/袋</td>
+                                <td><span class="tag tag-green">有货</span></td>
+                                <td><button class="btn btn-outline btn-sm">标记缺货</button></td>
+                            </tr>
+                            <tr>
+                                <td>金龙鱼食用油</td><td>5L/桶</td>
+                                <td><span class="tag tag-green">有货</span></td>
+                                <td><button class="btn btn-outline btn-sm">标记缺货</button></td>
+                            </tr>
+                            <tr>
+                                <td>白砂糖</td><td>50kg/袋</td>
+                                <td><span class="tag tag-green">有货</span></td>
+                                <td><button class="btn btn-outline btn-sm">标记缺货</button></td>
+                            </tr>
+                            <tr>
+                                <td>鸡蛋</td><td>30枚/箱</td>
+                                <td><span class="tag tag-red">缺货</span></td>
+                                <td><button class="btn btn-success btn-sm">标记有货</button></td>
+                            </tr>
+                            <tr>
+                                <td>黄油</td><td>500g/块</td>
+                                <td><span class="tag tag-green">有货</span></td>
+                                <td><button class="btn btn-outline btn-sm">标记缺货</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 配送区域 -->
+            <div id="section-delivery-area" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">配送区域</div>
+                    <div class="page-subtitle">设置可配送的区域范围（变更需管理员审核）</div>
+                </div>
+                <!-- 审核提示 -->
+                <div style="background: #f0f9ff; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">ℹ️</span>
+                    <div>
+                        <div style="font-weight: 600; color: #0369a1;">配送区域说明</div>
+                        <div style="font-size: 13px; color: #666;">只有在您配送区域内的门店才能看到您的商品并下单。扩大配送区域可以服务更多门店。</div>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">
+                            <span>已配送区域</span>
+                            <span class="tag tag-green">3个区域</span>
+                        </div>
+                        <div style="padding: 12px; border: 1px solid #10b981; border-radius: 8px; margin-bottom: 8px; background: #f0fdf4; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600;">XX省 - XX市 - 全市配送</div>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">覆盖门店：18家</div>
+                            </div>
+                            <button class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #ef4444;">申请删除</button>
+                        </div>
+                        <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600;">XX省 - YY市 - 主城区</div>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">覆盖门店：6家</div>
+                            </div>
+                            <button class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #ef4444;">申请删除</button>
+                        </div>
+                        <div style="padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600;">XX省 - YY市 - 开发区</div>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">覆盖门店：4家</div>
+                            </div>
+                            <button class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #ef4444;">申请删除</button>
+                        </div>
+                        <!-- 待审核区域 -->
+                        <div style="padding: 12px; border: 2px dashed #f59e0b; border-radius: 8px; margin-bottom: 8px; background: #fffbeb; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                                    XX省 - ZZ市 - 全市配送
+                                    <span class="status pending">待审核</span>
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">预计覆盖门店：12家</div>
+                            </div>
+                            <button class="btn btn-outline btn-sm">撤回</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">添加配送区域</div>
+                        <div class="form-group">
+                            <label class="form-label">省份</label>
+                            <select class="form-select"><option>请选择省份</option><option>XX省</option><option>YY省</option><option>ZZ省</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">城市</label>
+                            <select class="form-select"><option>请选择城市</option><option>XX市</option><option>YY市</option><option>ZZ市</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">区县</label>
+                            <select class="form-select"><option>全市配送</option><option>主城区</option><option>XX区</option><option>YY区</option><option>开发区</option></select>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 13px;">
+                            <div style="color: #666;">💡 选择"全市配送"将覆盖该城市所有区县</div>
+                        </div>
+                        <button class="btn btn-primary" style="width: 100%;">提交添加申请</button>
+                    </div>
+                </div>
+                <!-- 批量导入 -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>批量导入配送区域</span>
+                        <button class="btn btn-outline btn-sm">📥 下载模板</button>
+                    </div>
+                    <div style="border: 2px dashed #ddd; border-radius: 8px; padding: 24px; text-align: center;">
+                        <div style="font-size: 32px; margin-bottom: 12px;">📄</div>
+                        <div style="margin-bottom: 8px;">拖拽Excel文件到此处，或点击上传</div>
+                        <div style="font-size: 12px; color: #999;">支持 .xlsx, .xls 格式，批量添加配送区域</div>
+                        <button class="btn btn-outline" style="margin-top: 12px;">选择文件</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 配送时间 -->
+            <div id="section-delivery-time" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">配送设置</div>
+                    <div class="page-subtitle">设置配送日、起送价、商品起订量等</div>
+                </div>
+                <!-- 审核提示 -->
+                <div style="background: #fef3c7; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">⚠️</span>
+                    <div>
+                        <div style="font-weight: 600; color: #92400e;">配送设置变更需审核</div>
+                        <div style="font-size: 13px; color: #666;">修改配送日、起送价、配送区域后，需等待管理员审核通过后生效</div>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">当前配送设置</div>
+                        <div style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between;">
+                            <span style="color: #666;">起送金额</span>
+                            <span style="font-weight: 600; font-size: 18px; color: #ef4444;">¥200</span>
+                        </div>
+                        <div style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between;">
+                            <span style="color: #666;">配送日</span>
+                            <span style="font-weight: 600;">
+                                <span class="tag" style="background: #dbeafe; color: #2563eb; margin-right: 4px;">周一</span>
+                                <span class="tag" style="background: #dbeafe; color: #2563eb; margin-right: 4px;">周三</span>
+                                <span class="tag" style="background: #dbeafe; color: #2563eb;">周五</span>
+                            </span>
+                        </div>
+                        <div style="padding: 16px 0; display: flex; justify-content: space-between;">
+                            <span style="color: #666;">配送区域</span>
+                            <span>XX市全市配送</span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">修改配送设置</div>
+                        <div class="form-group">
+                            <label class="form-label">起送金额（元）</label>
+                            <input type="number" class="form-input" value="200" placeholder="订单总金额需达到此值">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">配送日</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                                <label style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #dbeafe; border-color: #3b82f6;">
+                                    <input type="checkbox" checked style="display: none;"> 
+                                    <span style="color: #2563eb; font-weight: 600;">周一 ✓</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer;">
+                                    <input type="checkbox" style="display: none;"> 
+                                    <span>周二</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #dbeafe; border-color: #3b82f6;">
+                                    <input type="checkbox" checked style="display: none;"> 
+                                    <span style="color: #2563eb; font-weight: 600;">周三 ✓</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer;">
+                                    <input type="checkbox" style="display: none;"> 
+                                    <span>周四</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: #dbeafe; border-color: #3b82f6;">
+                                    <input type="checkbox" checked style="display: none;"> 
+                                    <span style="color: #2563eb; font-weight: 600;">周五 ✓</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer;">
+                                    <input type="checkbox" style="display: none;"> 
+                                    <span>周六</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer;">
+                                    <input type="checkbox" style="display: none;"> 
+                                    <span>周日</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" style="width: 100%;">提交变更申请</button>
+                    </div>
+                </div>
+
+                <!-- 商品起订量设置 -->
+                <div class="card">
+                    <div class="card-title">
+                        <span>📦 商品起订量设置</span>
+                        <div>
+                            <button class="btn btn-outline btn-sm" style="margin-right: 8px;">批量设置</button>
+                            <button class="btn btn-primary btn-sm">+ 添加规则</button>
+                        </div>
+                    </div>
+                    <div style="background: #fef3c7; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
+                        <div style="font-size: 13px; color: #92400e;">
+                            ⚠️ <strong>需管理员审核：</strong>商品起订量设置变更需提交管理员审核，审核通过后生效。门店下单时，商品数量必须满足起订量要求才能加入购物车。
+                        </div>
+                    </div>
+                    <div class="filters" style="margin-bottom: 16px;">
+                        <select class="filter-select">
+                            <option>全部分类</option>
+                            <option>粮油类</option>
+                            <option>肉禽蛋类</option>
+                            <option>调味品</option>
+                        </select>
+                        <input type="text" class="filter-input" placeholder="搜索商品名称">
+                        <select class="filter-select">
+                            <option>全部状态</option>
+                            <option>已设置起订量</option>
+                            <option>未设置起订量</option>
+                        </select>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>商品名称</th>
+                                <th>品牌</th>
+                                <th>规格</th>
+                                <th>单价</th>
+                                <th>起订量</th>
+                                <th>起订金额</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 20px;">🌾</span>
+                                        <span style="font-weight: 600;">特级面粉</span>
+                                    </div>
+                                </td>
+                                <td><span class="tag" style="background: #fef3c7; color: #d97706;">金龙鱼</span></td>
+                                <td>25kg/袋</td>
+                                <td>¥78.00</td>
+                                <td>
+                                    <span style="font-weight: 600; color: #4f46e5; font-size: 16px;">5袋</span>
+                                </td>
+                                <td style="color: #666;">≥¥390</td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm">编辑</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 20px;">🌾</span>
+                                        <span style="font-weight: 600;">特级面粉</span>
+                                    </div>
+                                </td>
+                                <td><span class="tag" style="background: #fef3c7; color: #d97706;">金龙鱼</span></td>
+                                <td>50kg/袋</td>
+                                <td>¥150.00</td>
+                                <td>
+                                    <span style="font-weight: 600; color: #4f46e5; font-size: 16px;">2袋</span>
+                                </td>
+                                <td style="color: #666;">≥¥300</td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm">编辑</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 20px;">🛢️</span>
+                                        <span style="font-weight: 600;">食用油</span>
+                                    </div>
+                                </td>
+                                <td><span class="tag" style="background: #fef3c7; color: #d97706;">金龙鱼</span></td>
+                                <td>5L/桶</td>
+                                <td>¥95.00</td>
+                                <td>
+                                    <span style="font-weight: 600; color: #4f46e5; font-size: 16px;">2桶</span>
+                                </td>
+                                <td style="color: #666;">≥¥190</td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm">编辑</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 20px;">🛢️</span>
+                                        <span style="font-weight: 600;">食用油</span>
+                                    </div>
+                                </td>
+                                <td><span class="tag" style="background: #fef3c7; color: #d97706;">金龙鱼</span></td>
+                                <td>20L/桶</td>
+                                <td>¥320.00</td>
+                                <td>
+                                    <span style="font-weight: 600; color: #4f46e5; font-size: 16px;">1桶</span>
+                                </td>
+                                <td style="color: #666;">≥¥320</td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm">编辑</button>
+                                </td>
+                            </tr>
+                            <tr style="background: #f9fafb;">
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 20px;">🧈</span>
+                                        <span style="font-weight: 600;">黄油</span>
+                                    </div>
+                                </td>
+                                <td><span class="tag" style="background: #e0e7ff; color: #4f46e5;">安佳</span></td>
+                                <td>500g/块</td>
+                                <td>¥45.00</td>
+                                <td>
+                                    <span style="color: #999;">未设置</span>
+                                </td>
+                                <td style="color: #999;">-</td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm">设置</button>
+                                </td>
+                            </tr>
+                            <tr style="background: #f9fafb;">
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 20px;">🥚</span>
+                                        <span style="font-weight: 600;">鸡蛋</span>
+                                    </div>
+                                </td>
+                                <td><span class="tag" style="background: #d1fae5; color: #059669;">本地</span></td>
+                                <td>30枚/箱</td>
+                                <td>¥32.00</td>
+                                <td>
+                                    <span style="color: #999;">未设置</span>
+                                </td>
+                                <td style="color: #999;">-</td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm">设置</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 20px;">🧂</span>
+                                        <span style="font-weight: 600;">精制盐</span>
+                                    </div>
+                                </td>
+                                <td><span class="tag" style="background: #d1fae5; color: #059669;">中盐</span></td>
+                                <td>25kg/袋</td>
+                                <td>¥42.00</td>
+                                <td>
+                                    <span style="font-weight: 600; color: #4f46e5; font-size: 16px;">10袋</span>
+                                </td>
+                                <td style="color: #666;">≥¥420</td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm">编辑</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 8px; font-size: 13px; color: #666;">
+                        共 28 个商品，已设置起订量 18 个，未设置 10 个
+                    </div>
+                </div>
+
+                <!-- 设置起订量弹窗示意 -->
+                <div class="card" style="border: 2px dashed #10b981;">
+                    <div class="card-title">✏️ 设置起订量 - 特级面粉 金龙鱼 25kg/袋</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">最小起订数量</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" class="form-input" value="5" style="width: 100px;">
+                                <span>袋</span>
+                            </div>
+                            <div style="font-size: 12px; color: #666; margin-top: 4px;">门店下单时，该商品数量不能少于此值</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">起订金额预览</label>
+                            <div style="font-size: 24px; font-weight: 700; color: #ef4444;">¥390.00</div>
+                            <div style="font-size: 12px; color: #666;">= 5袋 × ¥78.00/袋</div>
+                        </div>
+                    </div>
+                    <div style="background: #fef3c7; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px; font-size: 12px; color: #92400e;">
+                        ⚠️ 提交后需等待管理员审核，审核通过后生效
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-primary">提交审核</button>
+                        <button class="btn btn-outline">取消</button>
+                    </div>
+                </div>
+            </div>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 账户信息 -->
+            <div id="section-profile" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">账户信息</div>
+                    <div class="page-subtitle">管理供应商账户信息</div>
+                </div>
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">基本信息</div>
+                        <div class="form-group">
+                            <label class="form-label">供应商名称</label>
+                            <input type="text" class="form-input" value="鑫源食品供应">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">联系人</label>
+                            <input type="text" class="form-input" value="王经理">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">联系电话</label>
+                            <input type="text" class="form-input" value="138****1234">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">地址</label>
+                            <input type="text" class="form-input" value="XX市XX区XX路XX号">
+                        </div>
+                        <button class="btn btn-primary">保存信息</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">账户统计</div>
+                        <div style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between;">
+                            <span style="color: #666;">入驻时间</span>
+                            <span>2024-01-15</span>
+                        </div>
+                        <div style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between;">
+                            <span style="color: #666;">累计订单</span>
+                            <span>2,456 单</span>
+                        </div>
+                        <div style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between;">
+                            <span style="color: #666;">累计销售额</span>
+                            <span>¥1,856,000</span>
+                        </div>
+                        <div style="padding: 16px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between;">
+                            <span style="color: #666;">服务门店数</span>
+                            <span>28 家</span>
+                        </div>
+                        <div style="padding: 16px 0; display: flex; justify-content: space-between;">
+                            <span style="color: #666;">在售物料数</span>
+                            <span>156 种</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 运单管理（仅快递配送供应商显示） -->
+            <div id="section-waybill" class="content-section">
+                <div class="page-header">
+                    <div class="page-title">运单管理</div>
+                    <div class="page-subtitle">上传和管理快递运单（仅快递配送模式需要）</div>
+                </div>
+                <!-- 快递配送提示 -->
+                <div style="background: #dbeafe; padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 24px;">📦</span>
+                    <div>
+                        <div style="font-weight: 600; color: #1e40af;">您当前为快递配送模式</div>
+                        <div style="font-size: 13px; color: #666;">需要为每个配送订单上传快递运单号，便于门店追踪物流</div>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">待填写运单号</div>
+                        <div class="stat-value text-red">5</div>
+                        <div class="stat-change">需要尽快填写</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">今日已填写</div>
+                        <div class="stat-value text-green">12</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">本月运单数</div>
+                        <div class="stat-value">186</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">运单完成率</div>
+                        <div class="stat-value">97.3%</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        <span>待填写运单号的订单</span>
+                        <span class="tag tag-red">5个待处理</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>订单编号</th>
+                                <th>门店</th>
+                                <th>商品数</th>
+                                <th>金额</th>
+                                <th>配送日期</th>
+                                <th>运单状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: #fef2f2;">
+                                <td>PO202412270128</td>
+                                <td>城东旗舰店</td>
+                                <td>5件</td>
+                                <td>¥2,580.00</td>
+                                <td>2024-12-28</td>
+                                <td><span class="status" style="background: #fee2e2; color: #dc2626;">未填写</span></td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" onclick="showUploadWaybillModal('PO202412270128')">填写运单号</button>
+                                    <button class="btn btn-outline btn-sm">详情</button>
+                                </td>
+                            </tr>
+                            <tr style="background: #fef2f2;">
+                                <td>PO202412270127</td>
+                                <td>万达广场店</td>
+                                <td>3件</td>
+                                <td>¥1,280.00</td>
+                                <td>2024-12-28</td>
+                                <td><span class="status" style="background: #fee2e2; color: #dc2626;">未填写</span></td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" onclick="showUploadWaybillModal('PO202412270127')">填写运单号</button>
+                                    <button class="btn btn-outline btn-sm">详情</button>
+                                </td>
+                            </tr>
+                            <tr style="background: #fef2f2;">
+                                <td>PO202412270126</td>
+                                <td>火车站店</td>
+                                <td>8件</td>
+                                <td>¥3,650.00</td>
+                                <td>2024-12-28</td>
+                                <td><span class="status" style="background: #fee2e2; color: #dc2626;">未填写</span></td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" onclick="showUploadWaybillModal('PO202412270126')">填写运单号</button>
+                                    <button class="btn btn-outline btn-sm">详情</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card">
+                    <div class="card-title">
+                        <span>已填写运单号</span>
+                        <div class="filters" style="margin: 0;">
+                            <input type="date" class="filter-input" value="2024-12-27">
+                            <button class="btn btn-outline btn-sm">搜索</button>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>订单编号</th>
+                                <th>门店</th>
+                                <th>快递公司</th>
+                                <th>运单号</th>
+                                <th>填写时间</th>
+                                <th>物流状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>PO202412270125</td>
+                                <td>大学城店</td>
+                                <td>顺丰速运</td>
+                                <td style="font-family: monospace;">SF1234567890</td>
+                                <td>2024-12-27 14:30</td>
+                                <td><span class="status completed">已签收</span></td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm">物流详情</button>
+                                    <button class="btn btn-outline btn-sm">修改</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>PO202412270120</td>
+                                <td>老城区店</td>
+                                <td>中通快递</td>
+                                <td style="font-family: monospace;">ZT9876543210</td>
+                                <td>2024-12-27 11:20</td>
+                                <td><span class="status delivering">运输中</span></td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm">物流详情</button>
+                                    <button class="btn btn-outline btn-sm">修改</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>PO202412270115</td>
+                                <td>城东旗舰店</td>
+                                <td>京东物流</td>
+                                <td style="font-family: monospace;">JD0011223344</td>
+                                <td>2024-12-27 09:45</td>
+                                <td><span class="status completed">已签收</span></td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm">物流详情</button>
+                                    <button class="btn btn-outline btn-sm">修改</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 运单填写说明 -->
+                <div class="card">
+                    <div class="card-title">📋 运单号填写说明</div>
+                    <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; font-size: 14px; color: #0369a1;">
+                        <ul style="margin-left: 20px; line-height: 1.8;">
+                            <li>订单发货后，请及时填写快递运单号</li>
+                            <li>运单号用于门店追踪物流状态</li>
+                            <li>如运单号填写错误，可点击"修改"进行更正</li>
+                            <li><strong>注意：</strong>供应商自配送模式无需填写运单号</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSection(sectionId, menuItem) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById('section-' + sectionId).classList.add('active');
+            
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            menuItem.classList.add('active');
+        }
+        
+        // 运单上传弹窗
+        function showUploadWaybillModal(orderNo) {
+            document.getElementById('waybillOrderNo').textContent = orderNo;
+            document.getElementById('uploadWaybillModal').classList.add('show');
+        }
+        
+        function closeUploadWaybillModal() {
+            document.getElementById('uploadWaybillModal').classList.remove('show');
+        }
+    </script>
+    
+    <!-- 运单号填写弹窗 -->
+    <div id="uploadWaybillModal" class="modal-overlay" onclick="if(event.target===this)closeUploadWaybillModal()">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-title">
+                <span>📦 填写运单号</span>
+                <span class="modal-close" onclick="closeUploadWaybillModal()">×</span>
+            </div>
+            <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+                <div style="font-size: 13px; color: #666;">订单编号</div>
+                <div style="font-size: 16px; font-weight: 600;" id="waybillOrderNo">PO202412270128</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">快递公司 <span style="color: #ef4444;">*</span></label>
+                <select class="form-select">
+                    <option value="">请选择快递公司</option>
+                    <option value="sf">顺丰速运</option>
+                    <option value="jd">京东物流</option>
+                    <option value="zt">中通快递</option>
+                    <option value="yt">圆通速递</option>
+                    <option value="yd">韵达快递</option>
+                    <option value="st">申通快递</option>
+                    <option value="db">德邦物流</option>
+                    <option value="other">其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">运单号 <span style="color: #ef4444;">*</span></label>
+                <input type="text" class="form-input" placeholder="请输入快递运单号">
+            </div>
+            <div class="form-group">
+                <label class="form-label">备注</label>
+                <textarea class="form-input" style="min-height: 60px; resize: vertical;" placeholder="如有特殊情况请备注说明（选填）"></textarea>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
+                <button class="btn btn-outline" style="flex: 1;" onclick="closeUploadWaybillModal()">取消</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="closeUploadWaybillModal()">确认提交</button>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        /* Modal样式 */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background: #fff; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-close { cursor: pointer; font-size: 24px; color: #999; }
+        .modal-close:hover { color: #333; }
+    </style>
+</body>
+</html>

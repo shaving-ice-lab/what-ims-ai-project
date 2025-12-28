@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供应链订货系统 - 原型预览</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* 头部 */
+        .header {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 48px;
+        }
+        .header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        
+        /* 角色分区 */
+        .section-title {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+        
+        /* 卡片网格 */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        
+        /* 卡片样式 */
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+        .card.admin::before { background: linear-gradient(90deg, #4f46e5, #7c3aed); }
+        .card.supplier::before { background: linear-gradient(90deg, #059669, #10b981); }
+        .card.store::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .card.app::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        
+        .card-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+        .card.admin .card-icon { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+        .card.supplier .card-icon { background: linear-gradient(135deg, #059669, #10b981); }
+        .card.store .card-icon { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
+        .card.app .card-icon { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+        
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+        .card-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .card-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .feature-tag {
+            padding: 4px 12px;
+            background: #f3f4f6;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .card-arrow {
+            position: absolute;
+            right: 24px;
+            bottom: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+        .card:hover .card-arrow {
+            background: #4f46e5;
+            color: #fff;
+        }
+        .card.supplier:hover .card-arrow { background: #10b981; }
+        .card.store:hover .card-arrow { background: #3b82f6; }
+        .card.app:hover .card-arrow { background: #f59e0b; }
+        
+        /* 分隔线 */
+        .divider {
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+            margin: 32px 0;
+        }
+        
+        /* 底部信息 */
+        .footer {
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            margin-top: 48px;
+        }
+        .footer a {
+            color: #fff;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* 快速预览区 */
+        .preview-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 32px;
+            margin-top: 48px;
+        }
+        .preview-title {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .preview-item {
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .preview-item:hover {
+            transform: scale(1.05);
+            background: #fff;
+        }
+        .preview-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .preview-name {
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 4px;
+        }
+        .preview-info {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>📦 供应链订货系统</h1>
+            <p>多角色原型预览 · 点击卡片进入详细页面</p>
+        </div>
+        
+        <!-- 管理端 -->
+        <div class="section-title">🔧 管理端</div>
+        <div class="cards-grid">
+            <a href="admin.html" class="card admin">
+                <div class="card-icon">👨‍💼</div>
+                <div class="card-title">管理员后台</div>
+                <div class="card-desc">平台运营管理中心，包含数据看板、订单管理、供应商管理、加价配置等核心功能</div>
+                <div class="card-features">
+                    <span class="feature-tag">数据看板</span>
+                    <span class="feature-tag">订单管理</span>
+                    <span class="feature-tag">供应商管理</span>
+                    <span class="feature-tag">加价配置</span>
+                    <span class="feature-tag">门店管理</span>
+                </div>
+                <div class="card-arrow">→</div>
+            </a>
+        </div>
+        
+        <!-- 供应商端 -->
+        <div class="section-title">🏭 供应商端</div>
+        <div class="cards-grid">
+            <a href="supplier.html" class="card supplier">
+                <div class="card-icon">🏭</div>
+                <div class="card-title">供应商后台</div>
+                <div class="card-desc">供应商订单处理与商品管理，支持价格设置、库存管理、配送设置等</div>
+                <div class="card-features">
+                    <span class="feature-tag">订单处理</span>
+                    <span class="feature-tag">市场行情</span>
+                    <span class="feature-tag">价格管理</span>
+                    <span class="feature-tag">配送设置</span>
+                    <span class="feature-tag">送货单打印</span>
+                </div>
+                <div class="card-arrow">→</div>
+            </a>
+        </div>
+        
+        <!-- 门店端 -->
+        <div class="section-title">🏪 门店端</div>
+        <div class="cards-grid">
+            <a href="store.html" class="card store">
+                <div class="card-icon">🏪</div>
+                <div class="card-title">门店后台</div>
+                <div class="card-desc">门店订货与数据统计，支持在线选购、购物车、订单跟踪等功能</div>
+                <div class="card-features">
+                    <span class="feature-tag">在线订货</span>
+                    <span class="feature-tag">购物车</span>
+                    <span class="feature-tag">订单管理</span>
+                    <span class="feature-tag">数据统计</span>
+                </div>
+                <div class="card-arrow">→</div>
+            </a>
+        </div>
+        
+        <!-- 移动端 -->
+        <div class="section-title">📱 移动端 APP / 小程序</div>
+        <div class="cards-grid">
+            <a href="app.html" class="card app">
+                <div class="card-icon">📱</div>
+                <div class="card-title">移动端原型</div>
+                <div class="card-desc">包含门店端、供应商端、管理员端三个角色的移动端界面原型</div>
+                <div class="card-features">
+                    <span class="feature-tag">门店小程序</span>
+                    <span class="feature-tag">供应商APP</span>
+                    <span class="feature-tag">管理员APP</span>
+                </div>
+                <div class="card-arrow">→</div>
+            </a>
+        </div>
+        
+        <!-- 快速预览 -->
+        <div class="preview-section">
+            <div class="preview-title">🎯 系统角色概览</div>
+            <div class="preview-grid">
+                <div class="preview-item">
+                    <div class="preview-icon">👨‍💼</div>
+                    <div class="preview-name">管理员</div>
+                    <div class="preview-info">平台运营 · 数据分析 · 加价管理</div>
+                </div>
+                <div class="preview-item">
+                    <div class="preview-icon">🏭</div>
+                    <div class="preview-name">供应商</div>
+                    <div class="preview-info">订单处理 · 价格设置 · 配送管理</div>
+                </div>
+                <div class="preview-item">
+                    <div class="preview-icon">🏪</div>
+                    <div class="preview-name">门店</div>
+                    <div class="preview-info">在线订货 · 订单跟踪 · 数据统计</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部 -->
+        <div class="footer">
+            <p>供应链订货系统原型 v1.0 · <a href="供应链系统设计文档.md">查看设计文档</a></p>
+        </div>
+    </div>
+</body>
+</html>
