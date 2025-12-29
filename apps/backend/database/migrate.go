@@ -19,9 +19,12 @@ func AutoMigrate(db *gorm.DB) error {
 		// User and Authentication models
 		&models.User{},
 		&models.Admin{},
+		&models.WechatBinding{},
+		&models.LoginLog{},
 		&models.Store{},
 		&models.Supplier{},
 		&models.DeliveryArea{},
+		&models.SupplierSettingAudit{},
 
 		// Material models
 		&models.Category{},
@@ -32,6 +35,13 @@ func AutoMigrate(db *gorm.DB) error {
 		// Order models
 		&models.Order{},
 		&models.OrderItem{},
+		&models.OrderCancelRequest{},
+		&models.OrderStatusLog{},
+		&models.OperationLog{},
+
+		// Media models
+		&models.MediaImage{},
+		&models.ImageMatchRule{},
 	)
 
 	if err != nil {
@@ -103,6 +113,42 @@ func CreateIndexes(db *gorm.DB) error {
 	// OrderItem indexes
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id)")
 	db.Exec("CREATE INDEX IF NOT EXISTS idx_order_items_material_sku_id ON order_items(material_sku_id)")
+
+	// WechatBinding indexes
+	db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS uk_wechat_bindings_openid ON wechat_bindings(openid)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_wechat_bindings_user_id ON wechat_bindings(user_id)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_wechat_bindings_bindable ON wechat_bindings(bindable_type, bindable_id)")
+
+	// SupplierSettingAudit indexes
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_supplier_setting_audits_supplier_id ON supplier_setting_audits(supplier_id)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_supplier_setting_audits_status ON supplier_setting_audits(status)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_supplier_setting_audits_submit_time ON supplier_setting_audits(submit_time)")
+
+	// OrderCancelRequest indexes
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_order_cancel_requests_order_id ON order_cancel_requests(order_id)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_order_cancel_requests_status ON order_cancel_requests(status)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_order_cancel_requests_created_at ON order_cancel_requests(created_at)")
+
+	// OrderStatusLog indexes
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_order_status_logs_order_id ON order_status_logs(order_id)")
+
+	// OperationLog indexes
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_operation_logs_user ON operation_logs(user_type, user_id)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_operation_logs_module_action ON operation_logs(module, action)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_operation_logs_target ON operation_logs(target_type, target_id)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_operation_logs_created_at ON operation_logs(created_at)")
+
+	// MediaImage indexes
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_media_images_category_brand ON media_images(category_id, brand)")
+	db.Exec("CREATE FULLTEXT INDEX IF NOT EXISTS idx_media_images_search ON media_images(name, match_keywords)")
+
+	// ImageMatchRule indexes
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_image_match_rules_active_priority ON image_match_rules(is_active, priority DESC)")
+
+	// LoginLog indexes
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_login_logs_user_id ON login_logs(user_id)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_login_logs_username ON login_logs(username)")
+	db.Exec("CREATE INDEX IF NOT EXISTS idx_login_logs_login_at ON login_logs(login_at)")
 
 	log.Println("Database indexes created successfully")
 	return nil

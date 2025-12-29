@@ -32,3 +32,14 @@ export type { OrderCardData, OrderCardProps } from './OrderCard';
 
 export { default as MaterialCard } from './MaterialCard';
 export type { MaterialCardData, MaterialCardProps } from './MaterialCard';
+
+// 图表组件
+export { BarChart, LineChart, PieChart } from './charts';
+export type {
+  BarChartDataItem,
+  BarChartProps,
+  LineChartDataItem,
+  LineChartProps,
+  PieChartDataItem,
+  PieChartProps,
+} from './charts';

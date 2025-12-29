@@ -114,9 +114,9 @@
     - 集成Ant Design组件库（所有UI组件必须使用Ant Design实现）
     - 项目支持管理员、供应商、门店三种角色
     - 通过用户权限动态显示不同功能模块和界面
-  - [~] 配置React Router路由系统
-    - 路由懒加载配置
-    - 路由守卫配置（基于用户角色和权限）
+  - [X] 配置React Router路由系统
+    - 路由懒加载配置（Next.js自动支持）
+    - 路由守卫配置（基于用户角色和权限）- middleware.ts实现
     - 路由元信息定义（权限、标题）
     - 动态路由生成（根据用户角色）
     - 多角色动态界面切换（管理员/供应商/门店使用同一套代码）
@@ -502,8 +502,8 @@
     - 趋势指示（上升/下降）
     - 图标支持
     - 点击跳转
-  - [ ] 图表组件封装
-    - 基于ECharts 5.x
+  - [X] 图表组件封装
+    - 基于@ant-design/charts（ECharts封装）
     - LineChart（折线图）
     - BarChart（柱状图）
     - PieChart（饼图）
@@ -574,24 +574,24 @@
   - [X] 编写GORM Model（含User关联）
   - [X] 编写数据库迁移
 
-- [ ] 🟡 **微信绑定表（WechatBinding）**
-  - [ ] id - BIGINT, 主键, 自增
-  - [ ] openid - VARCHAR(100), 微信OpenID, NOT NULL
-  - [ ] unionid - VARCHAR(100), 微信UnionID
-  - [ ] user_id - BIGINT, 关联用户ID, FK(User.id)
-  - [ ] role - ENUM, 绑定角色
-  - [ ] bindable_id - BIGINT, 关联业务ID（门店/供应商ID）
-  - [ ] bindable_type - VARCHAR(20), 关联类型（store/supplier）
-  - [ ] nickname - VARCHAR(100), 微信昵称
-  - [ ] avatar - VARCHAR(500), 微信头像
-  - [ ] bindtime - DATETIME, 绑定时间
-  - [ ] status - TINYINT(1), 状态
-  - [ ] **索引设计**
+- [X] 🟡 **微信绑定表（WechatBinding）**
+  - [X] id - BIGINT, 主键, 自增
+  - [X] openid - VARCHAR(100), 微信OpenID, NOT NULL
+  - [X] unionid - VARCHAR(100), 微信UnionID
+  - [X] user_id - BIGINT, 关联用户ID, FK(User.id)
+  - [X] role - ENUM, 绑定角色
+  - [X] bindable_id - BIGINT, 关联业务ID（门店/供应商ID）
+  - [X] bindable_type - VARCHAR(20), 关联类型（store/supplier）
+  - [X] nickname - VARCHAR(100), 微信昵称
+  - [X] avatar - VARCHAR(500), 微信头像
+  - [X] bindtime - DATETIME, 绑定时间
+  - [X] status - TINYINT(1), 状态
+  - [X] **索引设计**
     - uk_openid (openid) - 唯一索引
     - idx_user_id (user_id)
     - idx_bindable (bindable_type, bindable_id)
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 ### 2.2 门店模块
 
@@ -670,23 +670,23 @@
   - [ ] 编写GORM Model
   - [ ] 编写数据库迁移
 
-- [ ] 🟠 **供应商配送设置审核表（SupplierSettingAudit）**
-  - [ ] id - BIGINT, 主键, 自增
-  - [ ] supplier_id - BIGINT, 供应商ID, FK(Supplier.id), NOT NULL
-  - [ ] change_type - ENUM('min_order','delivery_days','delivery_area'), 变更类型
-  - [ ] old_value - JSON, 原值
-  - [ ] new_value - JSON, 新值
-  - [ ] status - ENUM('pending','approved','rejected'), 审核状态, DEFAULT 'pending'
-  - [ ] submit_time - DATETIME, 提交时间
-  - [ ] audit_time - DATETIME, 审核时间
-  - [ ] auditor_id - BIGINT, 审核人ID, FK(Admin.id)
-  - [ ] reject_reason - VARCHAR(500), 驳回原因
-  - [ ] **索引设计**
+- [X] 🟠 **供应商配送设置审核表（SupplierSettingAudit）**
+  - [X] id - BIGINT, 主键, 自增
+  - [X] supplier_id - BIGINT, 供应商ID, FK(Supplier.id), NOT NULL
+  - [X] change_type - ENUM('min_order','delivery_days','delivery_area'), 变更类型
+  - [X] old_value - JSON, 原值
+  - [X] new_value - JSON, 新值
+  - [X] status - ENUM('pending','approved','rejected'), 审核状态, DEFAULT 'pending'
+  - [X] submit_time - DATETIME, 提交时间
+  - [X] audit_time - DATETIME, 审核时间
+  - [X] auditor_id - BIGINT, 审核人ID, FK(Admin.id)
+  - [X] reject_reason - VARCHAR(500), 驳回原因
+  - [X] **索引设计**
     - idx_supplier_id (supplier_id)
     - idx_status (status) - 待审核列表
     - idx_submit_time (submit_time)
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 ### 2.4 物料模块
 
@@ -870,38 +870,38 @@
   - [ ] 编写GORM Model
   - [ ] 编写数据库迁移
 
-- [ ] 🟠 **订单取消申请表（OrderCancelRequest）**
-  - [ ] id - BIGINT, 主键, 自增
-  - [ ] order_id - BIGINT, 订单ID, FK(Order.id), NOT NULL
-  - [ ] store_id - BIGINT, 门店ID, FK(Store.id), NOT NULL
-  - [ ] reason - VARCHAR(500), 取消原因, NOT NULL
-  - [ ] status - ENUM('pending','approved','rejected'), 申请状态, DEFAULT 'pending'
-  - [ ] admin_id - BIGINT, 处理管理员ID, FK(Admin.id)
-  - [ ] admin_remark - VARCHAR(500), 管理员处理备注
-  - [ ] supplier_contacted - TINYINT(1), 是否已联系供应商, DEFAULT 0
-  - [ ] supplier_response - VARCHAR(500), 供应商反馈
-  - [ ] created_at - DATETIME, 申请时间
-  - [ ] processed_at - DATETIME, 处理时间
-  - [ ] **索引设计**
+- [X] 🟠 **订单取消申请表（OrderCancelRequest）**
+  - [X] id - BIGINT, 主键, 自增
+  - [X] order_id - BIGINT, 订单ID, FK(Order.id), NOT NULL
+  - [X] store_id - BIGINT, 门店ID, FK(Store.id), NOT NULL
+  - [X] reason - VARCHAR(500), 取消原因, NOT NULL
+  - [X] status - ENUM('pending','approved','rejected'), 申请状态, DEFAULT 'pending'
+  - [X] admin_id - BIGINT, 处理管理员ID, FK(Admin.id)
+  - [X] admin_remark - VARCHAR(500), 管理员处理备注
+  - [X] supplier_contacted - TINYINT(1), 是否已联系供应商, DEFAULT 0
+  - [X] supplier_response - VARCHAR(500), 供应商反馈
+  - [X] created_at - DATETIME, 申请时间
+  - [X] processed_at - DATETIME, 处理时间
+  - [X] **索引设计**
     - idx_order_id (order_id)
     - idx_status (status) - 待处理列表
     - idx_created_at (created_at)
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
-- [ ] 🟡 **订单状态变更日志表（OrderStatusLog）**
-  - [ ] id - BIGINT, 主键, 自增
-  - [ ] order_id - BIGINT, 订单ID, FK(Order.id), NOT NULL
-  - [ ] from_status - VARCHAR(30), 原状态
-  - [ ] to_status - VARCHAR(30), 新状态, NOT NULL
-  - [ ] operator_type - ENUM('store','supplier','admin','system'), 操作人类型
-  - [ ] operator_id - BIGINT, 操作人ID
-  - [ ] remark - VARCHAR(200), 备注
-  - [ ] created_at - DATETIME
-  - [ ] **索引设计**
+- [X] 🟡 **订单状态变更日志表（OrderStatusLog）**
+  - [X] id - BIGINT, 主键, 自增
+  - [X] order_id - BIGINT, 订单ID, FK(Order.id), NOT NULL
+  - [X] from_status - VARCHAR(30), 原状态
+  - [X] to_status - VARCHAR(30), 新状态, NOT NULL
+  - [X] operator_type - ENUM('store','supplier','admin','system'), 操作人类型
+  - [X] operator_id - BIGINT, 操作人ID
+  - [X] remark - VARCHAR(200), 备注
+  - [X] created_at - DATETIME
+  - [X] **索引设计**
     - idx_order_id (order_id) - 订单状态历史查询
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 ### 2.6 支付模块
 
@@ -1010,89 +1010,89 @@
   - [X] 编写GORM Model
   - [ ] 编写数据库迁移
 
-- [ ] 🟡 **操作日志表（OperationLog）**
-  - [ ] id - BIGINT, 主键, 自增
-  - [ ] user_id - BIGINT, 操作用户ID
-  - [ ] user_type - ENUM('admin','supplier','store'), 用户类型
-  - [ ] user_name - VARCHAR(50), 用户名称（冗余，便于查看）
-  - [ ] module - VARCHAR(50), 模块名称, NOT NULL
-  - [ ] action - VARCHAR(50), 操作类型(create/update/delete/export等), NOT NULL
-  - [ ] target_type - VARCHAR(50), 目标类型(order/store/supplier等)
-  - [ ] target_id - BIGINT, 目标ID
-  - [ ] description - VARCHAR(500), 操作描述
-  - [ ] before_data - JSON, 操作前数据
-  - [ ] after_data - JSON, 操作后数据
-  - [ ] diff_data - JSON, 变更差异（可选，便于查看）
-  - [ ] ip_address - VARCHAR(50), IP地址
-  - [ ] user_agent - VARCHAR(500), 浏览器UA
-  - [ ] request_url - VARCHAR(500), 请求URL
-  - [ ] request_method - VARCHAR(10), 请求方法
-  - [ ] created_at - DATETIME
-  - [ ] **索引设计**
+- [X] 🟡 **操作日志表（OperationLog）**
+  - [X] id - BIGINT, 主键, 自增
+  - [X] user_id - BIGINT, 操作用户ID
+  - [X] user_type - ENUM('admin','supplier','store'), 用户类型
+  - [X] user_name - VARCHAR(50), 用户名称（冗余，便于查看）
+  - [X] module - VARCHAR(50), 模块名称, NOT NULL
+  - [X] action - VARCHAR(50), 操作类型(create/update/delete/export等), NOT NULL
+  - [X] target_type - VARCHAR(50), 目标类型(order/store/supplier等)
+  - [X] target_id - BIGINT, 目标ID
+  - [X] description - VARCHAR(500), 操作描述
+  - [X] before_data - JSON, 操作前数据
+  - [X] after_data - JSON, 操作后数据
+  - [X] diff_data - JSON, 变更差异（可选，便于查看）
+  - [X] ip_address - VARCHAR(50), IP地址
+  - [X] user_agent - VARCHAR(500), 浏览器UA
+  - [X] request_url - VARCHAR(500), 请求URL
+  - [X] request_method - VARCHAR(10), 请求方法
+  - [X] created_at - DATETIME
+  - [X] **索引设计**
     - idx_user (user_type, user_id) - 用户操作记录
     - idx_module_action (module, action) - 模块操作统计
     - idx_target (target_type, target_id) - 目标操作历史
     - idx_created_at (created_at) - 时间查询
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
-  - [ ] **日志保留策略**：保疐90天，定期清理
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
+  - [ ] **日志保留策略**：保留90天，定期清理
 
 ### 2.9 素材库模块
 
-- [ ] 🟡 **素材图片表（MediaImage）**
-  - [ ] id - BIGINT, 主键, 自增
-  - [ ] category_id - BIGINT, 分类ID, FK(Category.id)
-  - [ ] brand - VARCHAR(50), 品牌
-  - [ ] name - VARCHAR(100), 图片名称
-  - [ ] url - VARCHAR(500), 图片URL, NOT NULL
-  - [ ] thumbnail_url - VARCHAR(500), 缩略图URL
-  - [ ] file_size - INT, 文件大小(字节)
-  - [ ] width - INT, 图片宽度
-  - [ ] height - INT, 图片高度
-  - [ ] tags - JSON, 标签数组, 如["有机","进口"]
-  - [ ] sku_codes - JSON, 关联SKU编码数组
-  - [ ] match_keywords - VARCHAR(500), 匹配关键词
-  - [ ] usage_count - INT, 使用次数, DEFAULT 0
-  - [ ] status - TINYINT(1), 状态, DEFAULT 1
-  - [ ] uploaded_by - BIGINT, 上传人ID
-  - [ ] created_at - DATETIME
-  - [ ] **索引设计**
+- [X] 🟡 **素材图片表（MediaImage）**
+  - [X] id - BIGINT, 主键, 自增
+  - [X] category_id - BIGINT, 分类ID, FK(Category.id)
+  - [X] brand - VARCHAR(50), 品牌
+  - [X] name - VARCHAR(100), 图片名称
+  - [X] url - VARCHAR(500), 图片URL, NOT NULL
+  - [X] thumbnail_url - VARCHAR(500), 缩略图URL
+  - [X] file_size - INT, 文件大小(字节)
+  - [X] width - INT, 图片宽度
+  - [X] height - INT, 图片高度
+  - [X] tags - JSON, 标签数组, 如["有机","进口"]
+  - [X] sku_codes - JSON, 关联SKU编码数组
+  - [X] match_keywords - VARCHAR(500), 匹配关键词
+  - [X] usage_count - INT, 使用次数, DEFAULT 0
+  - [X] status - TINYINT(1), 状态, DEFAULT 1
+  - [X] uploaded_by - BIGINT, 上传人ID
+  - [X] created_at - DATETIME
+  - [X] **索引设计**
     - idx_category_brand (category_id, brand)
     - FULLTEXT idx_search (name, match_keywords) - 搜索
     - idx_tags (tags) - JSON索引
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
-- [ ] 🟡 **图片匹配规则表（ImageMatchRule）**
-  - [ ] id - BIGINT, 主键, 自增
-  - [ ] name - VARCHAR(100), 规则名称
-  - [ ] rule_type - ENUM('name','brand','sku','keyword'), 规则类型
-  - [ ] match_pattern - VARCHAR(200), 匹配模式（正则或关键词）
-  - [ ] similarity_threshold - DECIMAL(3,2), 相似度阈值(0-1), DEFAULT 0.8
-  - [ ] priority - INT, 优先级, DEFAULT 0
-  - [ ] is_active - TINYINT(1), 是否启用, DEFAULT 1
-  - [ ] created_at - DATETIME
-  - [ ] **索引设计**
+- [X] 🟡 **图片匹配规则表（ImageMatchRule）**
+  - [X] id - BIGINT, 主键, 自增
+  - [X] name - VARCHAR(100), 规则名称
+  - [X] rule_type - ENUM('name','brand','sku','keyword'), 规则类型
+  - [X] match_pattern - VARCHAR(200), 匹配模式（正则或关键词）
+  - [X] similarity_threshold - DECIMAL(3,2), 相似度阈值(0-1), DEFAULT 0.8
+  - [X] priority - INT, 优先级, DEFAULT 0
+  - [X] is_active - TINYINT(1), 是否启用, DEFAULT 1
+  - [X] created_at - DATETIME
+  - [X] **索引设计**
     - idx_active_priority (is_active, priority DESC)
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 ### 2.10 购物车模块（Redis存储）
 
-- [ ] 🔴 **购物车数据结构设计**
-  - [ ] Redis Key设计：`cart:{store_id}:{supplier_id}`
-  - [ ] 数据结构：Hash
+- [X] 🔴 **购物车数据结构设计**
+  - [X] Redis Key设计：`cart:{store_id}:{supplier_id}`
+  - [X] 数据结构：Hash
     - field: `{material_sku_id}`
     - value: JSON `{quantity, addedAt, price, ...}`
-  - [ ] 过期时间：30天
-  - [ ] **购物车操作接口**
+  - [X] 过期时间：30天
+  - [X] **购物车操作接口**
     - addToCart(storeId, supplierId, skuId, quantity)
     - updateQuantity(storeId, supplierId, skuId, quantity)
     - removeItem(storeId, supplierId, skuId)
     - getCart(storeId) - 获取门店所有供应商购物车
     - clearCart(storeId, supplierId) - 清空指定供应商购物车
     - getCartCount(storeId) - 获取购物车商品总数
-  - [ ] 编写购物车Service
+  - [X] 编写购物车Service
   - [ ] 编写单元测试
 
 ---
@@ -1125,9 +1125,9 @@
   - [X] 实现账号锁定机制
     - 锁定期间返回剩余解锁时间
     - 管理员可手动解锁
-  - [ ] 实现登录日志记录
-  - [ ] 实现登录日志记录
+  - [X] 实现登录日志记录
     - 记录登录时间、IP、设备信息
+    - LoginLog模型已创建
   - [ ] 编写登录接口单元测试
   - [ ] 编写登录流程集成测试
 
@@ -1169,10 +1169,11 @@
 
 - [X] 🔴 **登出功能**
   - [X] 实现登出接口 `POST /api/auth/logout`
-  - [ ] 将Token加入黑名单（Redis存储，Key: `token_blacklist:{sessionId}`）
-  - [ ] 黑名单过期时间与Token有效期一致
-  - [ ] 清除用户Session相关缓存
-  - [ ] 前端清除本地存储的Token和用户信息
+  - [X] 将Token加入黑名单（Redis存储，Key: `token_blacklist:{sessionId}`）
+  - [X] 黑名单过期时间与Token有效期一致
+  - [X] 清除用户Session相关缓存
+  - [X] 前端清除本地存储的Token和用户信息
+    - auth.ts工具函数实现clearAuthData和logout
 
 - [ ] 🟢 **微信登录（可选扩展）**
   - [ ] 实现微信OAuth授权流程
@@ -1237,14 +1238,16 @@
     - 管理员：根据permissions数组校验
     - 供应商：只能访问供应商相关接口
     - 门店：只能访问门店相关接口
-  - [ ] 实现前端路由权限守卫
-    - React Router权限守卫
+  - [X] 实现前端路由权限守卫
+    - Next.js middleware.ts实现
     - 根据用户权限动态生成路由
-  - [ ] 实现菜单权限控制
+  - [X] 实现菜单权限控制
+    - PermissionMenu组件实现
     - 根据权限动态生成侧边栏菜单
   - [X] 实现按钮级权限控制
     - 权限组件：`<PermissionButton permission="order:delete">删除</PermissionButton>`
-  - [ ] 实现敏感操作二次确认
+  - [X] 实现敏感操作二次确认
+    - ConfirmAction组件实现
     - 删除、批量操作需二次确认
     - 敏感配置修改需输入密码
 
