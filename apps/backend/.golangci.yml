@@ -1,0 +1,179 @@
+# golangci-lint 配置文件
+# 供应链订货系统后端代码规范
+
+run:
+  # 超时时间
+  timeout: 5m
+  # 并发数
+  concurrency: 4
+  # 跳过目录
+  skip-dirs:
+    - vendor
+    - docs
+    - tmp
+  # 跳过文件
+  skip-files:
+    - ".*_test\\.go$"
+
+output:
+  # 输出格式
+  format: colored-line-number
+  # 打印检查的行
+  print-issued-lines: true
+  # 打印 linter 名称
+  print-linter-name: true
+  # 唯一的输出
+  uniq-by-line: true
+  # 按文件路径排序
+  sort-results: true
+
+linters-settings:
+  # 错误检查配置
+  errcheck:
+    # 检查类型断言
+    check-type-assertions: true
+    # 检查空白标识符
+    check-blank: true
+
+  # 函数复杂度检查
+  gocyclo:
+    # 最小复杂度阈值
+    min-complexity: 15
+
+  # 代码行长度检查
+  lll:
+    # 最大行长度
+    line-length: 150
+    # Tab宽度
+    tab-width: 4
+
+  # 拼写检查
+  misspell:
+    locale: US
+
+  # 命名规范检查
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+
+  # 静态分析配置
+  staticcheck:
+    checks:
+      - all
+
+  # 未使用变量检查
+  unused:
+    check-exported: false
+
+  # Go vet 配置
+  govet:
+    check-shadowing: true
+    enable-all: true
+
+  # gofmt 配置
+  gofmt:
+    simplify: true
+
+  # goimports 配置
+  goimports:
+    local-prefixes: github.com/project/backend
+
+  # 安全检查
+  gosec:
+    excludes:
+      - G104 # 忽略未检查的错误（某些情况下）
+    config:
+      global:
+        audit: enabled
+
+linters:
+  disable-all: true
+  enable:
+    # 默认启用的 linters
+    - errcheck      # 检查未处理的错误
+    - gosimple      # 简化代码建议
+    - govet         # Go vet 检查
+    - ineffassign   # 检测无效赋值
+    - staticcheck   # 静态分析
+    - unused        # 未使用的变量/函数检查
+
+    # 额外启用的 linters
+    - bodyclose     # HTTP响应体关闭检查
+    - contextcheck  # context 使用检查
+    - dupl          # 重复代码检查
+    - errname       # 错误命名规范
+    - errorlint     # 错误处理规范
+    - exhaustive    # switch 完整性检查
+    - gocyclo       # 圈复杂度检查
+    - gofmt         # 代码格式化检查
+    - goimports     # import 格式化检查
+    - gosec         # 安全检查
+    - lll           # 行长度检查
+    - misspell      # 拼写检查
+    - nakedret      # 裸返回检查
+    - nilerr        # nil 错误检查
+    - nolintlint    # nolint 指令检查
+    - prealloc      # 预分配切片建议
+    - predeclared   # 预声明标识符检查
+    - revive        # 替代 golint
+    - unconvert     # 不必要的类型转换
+    - unparam       # 未使用的参数
+    - whitespace    # 空白检查
+
+issues:
+  # 排除规则
+  exclude-rules:
+    # 测试文件中忽略某些检查
+    - path: _test\.go
+      linters:
+        - dupl
+        - gosec
+        - errcheck
+
+    # main.go 中忽略行长度
+    - path: main\.go
+      linters:
+        - lll
+
+    # models 目录中忽略重复代码检查
+    - path: models/
+      linters:
+        - dupl
+
+  # 最大相同问题数
+  max-same-issues: 50
+  # 最大问题数
+  max-issues-per-linter: 100
+  # 新代码优先
+  new: false
+  # 显示所有问题
+  fix: false
+
+severity:
+  # 默认严重级别
+  default-severity: warning
+  # 规则严重级别
+  rules:
+    - linters:
+        - errcheck
+        - govet
+        - staticcheck
+      severity: error
