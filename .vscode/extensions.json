@@ -1,0 +1,23 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-tslint-plugin",
+    "bradlc.vscode-tailwindcss",
+    "golang.go",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+    "formulahendry.auto-rename-tag",
+    "dsznajder.es7-react-js-snippets",
+    "antfu.vite",
+    "christian-kohler.path-intellisense",
+    "mikestead.dotenv",
+    "editorconfig.editorconfig",
+    "streetsidesoftware.code-spell-checker",
+    "davidanson.vscode-markdownlint",
+    "yzhang.markdown-all-in-one",
+    "csstools.postcss",
+    "prisma.prisma",
+    "zixuanchen.vitest-explorer"
+  ]
+}
