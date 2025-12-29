@@ -1,0 +1,25 @@
+{
+  "name": "@project/utils",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.19",
+    "decimal.js": "^10.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.27",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.0"
+  }
+}
