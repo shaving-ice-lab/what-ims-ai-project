@@ -1,28 +1,30 @@
+'use client';
+
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { logout } from '@/store/slices/authSlice';
 import {
-    BarChartOutlined,
-    DashboardOutlined,
-    FileTextOutlined,
-    LogoutOutlined,
-    MenuFoldOutlined,
-    MenuUnfoldOutlined,
-    SettingOutlined,
-    ShopOutlined,
-    ShoppingCartOutlined,
-    TeamOutlined,
-    UserOutlined,
+  BarChartOutlined,
+  DashboardOutlined,
+  FileTextOutlined,
+  LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  SettingOutlined,
+  ShopOutlined,
+  ShoppingCartOutlined,
+  TeamOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { Avatar, Button, Dropdown, Layout, Menu, Space } from 'antd';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 const { Header, Sider, Content } = Layout;
 
-export const MainLayout: React.FC = () => {
+export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const { user, currentRole } = useAppSelector((state) => state.auth);
 
@@ -147,16 +149,17 @@ export const MainLayout: React.FC = () => {
       key: 'profile',
       icon: <UserOutlined />,
       label: '个人信息',
-      onClick: () => navigate('/profile'),
+      onClick: () => router.push('/profile'),
     },
     {
       key: 'settings',
       icon: <SettingOutlined />,
       label: '账户设置',
-      onClick: () => navigate('/settings'),
+      onClick: () => router.push('/settings'),
     },
     {
-      type: 'divider',
+      type: 'divider' as const,
+      key: 'divider',
     },
     {
       key: 'logout',
@@ -164,13 +167,13 @@ export const MainLayout: React.FC = () => {
       label: '退出登录',
       onClick: () => {
         dispatch(logout());
-        navigate('/login');
+        router.push('/login');
       },
     },
   ];
 
   const handleMenuClick = ({ key }: { key: string }) => {
-    navigate(key);
+    router.push(key);
   };
 
   const getRoleName = () => {
@@ -185,17 +188,28 @@ export const MainLayout: React.FC = () => {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed}>
-        <div className="logo" style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.3)' }} />
+        <div
+          className="logo"
+          style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.3)' }}
+        />
         <Menu
           theme="dark"
           mode="inline"
-          selectedKeys={[location.pathname]}
+          selectedKeys={[pathname]}
           items={getMenuItems()}
           onClick={handleMenuClick}
         />
       </Sider>
       <Layout>
-        <Header style={{ padding: 0, background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Header
+          style={{
+            padding: 0,
+            background: '#fff',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -224,7 +238,7 @@ export const MainLayout: React.FC = () => {
             background: '#fff',
           }}
         >
-          <Outlet />
+          {children}
         </Content>
       </Layout>
     </Layout>

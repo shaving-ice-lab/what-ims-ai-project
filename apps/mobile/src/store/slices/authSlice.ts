@@ -56,8 +56,8 @@ const authSlice = createSlice({
       state.loading = false;
 
       // 如果用户只有一个角色，自动设置为当前角色
-      if (action.payload.user.roles.length === 1) {
-        state.currentRole = action.payload.user.roles[0] ?? null;
+      if (action.payload.user.roles.length === 1 && action.payload.user.roles[0]) {
+        state.currentRole = action.payload.user.roles[0];
       }
     },
 

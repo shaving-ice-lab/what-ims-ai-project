@@ -3,82 +3,122 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 interface CartItem {
   supplierId: number;
   supplierName: string;
-  materialId: number;
-  skuId: number;
-  name: string;
+  materialSkuId: number;
+  materialName: string;
   brand: string;
   spec: string;
   unit: string;
   imageUrl?: string;
   quantity: number;
-  price: number;
-  minOrderQuantity: number;
-  minOrderAmount: number;
-  subtotal?: number;
+  unitPrice: number;
+  markupAmount: number;
+  finalPrice: number;
+  minQuantity: number;
+  stepQuantity: number;
 }
 
 interface CartState {
-  items: CartItem[];
-  total: number;
+  items: Record<number, CartItem[]>;
+  totalCount: number;
+  totalAmount: number;
+  lastUpdated?: string;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: CartState = {
-  items: [],
-  total: 0,
+  items: {},
+  totalCount: 0,
+  totalAmount: 0,
   loading: false,
   error: null,
+};
+
+// 辅助函数：重新计算购物车总计
+const recalculateTotals = (state: CartState) => {
+  const allItems = Object.values(state.items).flat();
+  state.totalCount = allItems.reduce((sum, item) => sum + item.quantity, 0);
+  state.totalAmount = allItems.reduce((sum, item) => sum + item.finalPrice * item.quantity, 0);
+  state.lastUpdated = new Date().toISOString();
 };
 
 const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
-    setCart: (state, action: PayloadAction<{ items: CartItem[]; total: number }>) => {
-      state.items = action.payload.items;
-      state.total = action.payload.total;
-      state.error = null;
-    },
-    addItem: (state, action: PayloadAction<CartItem>) => {
-      const existingItem = state.items.find(
-        item => item.supplierId === action.payload.supplierId && 
-                item.skuId === action.payload.skuId
+    addToCart: (state, action: PayloadAction<CartItem>) => {
+      const supplierId = action.payload.supplierId;
+      if (!state.items[supplierId]) {
+        state.items[supplierId] = [];
+      }
+
+      const existingItemIndex = state.items[supplierId].findIndex(
+        (item) => item.materialSkuId === action.payload.materialSkuId
       );
-      
-      if (existingItem) {
-        existingItem.quantity += action.payload.quantity;
-        existingItem.subtotal = existingItem.quantity * existingItem.price;
+
+      if (existingItemIndex >= 0) {
+        const existingItem = state.items[supplierId]?.[existingItemIndex];
+        if (existingItem) {
+          existingItem.quantity += action.payload.quantity;
+        }
       } else {
-        const newItem = { ...action.payload };
-        newItem.subtotal = newItem.quantity * newItem.price;
-        state.items.push(newItem);
+        state.items[supplierId].push(action.payload);
       }
-      
-      state.total = state.items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+
+      recalculateTotals(state);
     },
-    updateQuantity: (state, action: PayloadAction<{ supplierId: number; skuId: number; quantity: number }>) => {
-      const item = state.items.find(
-        item => item.supplierId === action.payload.supplierId && 
-                item.skuId === action.payload.skuId
-      );
-      
-      if (item) {
-        item.quantity = action.payload.quantity;
-        item.subtotal = item.quantity * item.price;
-        state.total = state.items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+    updateQuantity: (
+      state,
+      action: PayloadAction<{
+        supplierId: number;
+        materialSkuId: number;
+        quantity: number;
+      }>
+    ) => {
+      const { supplierId, materialSkuId, quantity } = action.payload;
+      if (state.items[supplierId]) {
+        const item = state.items[supplierId].find((item) => item.materialSkuId === materialSkuId);
+        if (item) {
+          item.quantity = quantity;
+          if (quantity === 0) {
+            state.items[supplierId] = state.items[supplierId].filter(
+              (item) => item.materialSkuId !== materialSkuId
+            );
+            if (state.items[supplierId].length === 0) {
+              delete state.items[supplierId];
+            }
+          }
+        }
       }
+      recalculateTotals(state);
     },
-    removeItem: (state, action: PayloadAction<{ supplierId: number; skuId: number }>) => {
-      state.items = state.items.filter(
-        item => !(item.supplierId === action.payload.supplierId && 
-                  item.skuId === action.payload.skuId)
-      );
-      state.total = state.items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+    removeFromCart: (
+      state,
+      action: PayloadAction<{
+        supplierId: number;
+        materialSkuId: number;
+      }>
+    ) => {
+      const { supplierId, materialSkuId } = action.payload;
+      if (state.items[supplierId]) {
+        state.items[supplierId] = state.items[supplierId].filter(
+          (item) => item.materialSkuId !== materialSkuId
+        );
+        if (state.items[supplierId].length === 0) {
+          delete state.items[supplierId];
+        }
+      }
+      recalculateTotals(state);
+    },
+    clearSupplierCart: (state, action: PayloadAction<number>) => {
+      delete state.items[action.payload];
+      recalculateTotals(state);
     },
     clearCart: (state) => {
-      state.items = [];
-      state.total = 0;
+      state.items = {};
+      state.totalCount = 0;
+      state.totalAmount = 0;
+      state.lastUpdated = new Date().toISOString();
       state.error = null;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -91,10 +131,10 @@ const cartSlice = createSlice({
 });
 
 export const {
-  setCart,
-  addItem,
+  addToCart,
   updateQuantity,
-  removeItem,
+  removeFromCart,
+  clearSupplierCart,
   clearCart,
   setLoading,
   setError,

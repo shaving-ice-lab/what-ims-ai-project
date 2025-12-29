@@ -1,16 +1,17 @@
 import Taro from '@tarojs/taro';
+
 import { store } from '../store';
 
 interface RequestConfig {
   url: string;
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  data?: any;
+  data?: Record<string, unknown> | unknown[];
   header?: Record<string, string>;
   showLoading?: boolean;
   loadingText?: string;
 }
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data: T;
@@ -22,7 +23,8 @@ class Request {
   private timeout: number;
 
   constructor() {
-    this.baseUrl = process.env.TARO_APP_API_BASE_URL || 'http://localhost:8080/api';
+    // 使用Taro的环境变量或默认值
+    this.baseUrl = 'http://localhost:8080/api';
     this.timeout = 30000;
   }
 
@@ -33,7 +35,7 @@ class Request {
 
     const state = store.getState();
     const token = state.auth?.token;
-    
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -41,7 +43,9 @@ class Request {
     return headers;
   }
 
-  private async handleResponse<T>(response: Taro.request.SuccessCallbackResult): Promise<ApiResponse<T>> {
+  private async handleResponse<T>(
+    response: Taro.request.SuccessCallbackResult
+  ): Promise<ApiResponse<T>> {
     const { statusCode, data } = response;
 
     if (statusCode >= 200 && statusCode < 300) {
@@ -56,26 +60,39 @@ class Request {
         icon: 'none',
         duration: 2000,
       });
-      
+
       // Clear auth state and redirect to login
       store.dispatch({ type: 'auth/logout' });
-      
+
       setTimeout(() => {
         Taro.redirectTo({
           url: '/pages/login/index',
         });
       }, 2000);
-      
+
       throw new Error('Unauthorized');
     }
 
     // Handle other errors
-    const errorMessage = (data as any)?.message || `请求失败：${statusCode}`;
+    const errorMessage =
+      typeof data === 'object' &&
+      data !== null &&
+      'message' in data &&
+      typeof data.message === 'string'
+        ? data.message
+        : `请求失败：${statusCode}`;
     throw new Error(errorMessage);
   }
 
-  public async request<T = any>(config: RequestConfig): Promise<ApiResponse<T>> {
-    const { url, method = 'GET', data, header = {}, showLoading = true, loadingText = '加载中...' } = config;
+  public async request<T = unknown>(config: RequestConfig): Promise<ApiResponse<T>> {
+    const {
+      url,
+      method = 'GET',
+      data,
+      header = {},
+      showLoading = true,
+      loadingText = '加载中...',
+    } = config;
 
     if (showLoading) {
       Taro.showLoading({
@@ -103,9 +120,10 @@ class Request {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '网络请求失败';
       Taro.showToast({
-        title: error.message || '网络请求失败',
+        title: errorMessage,
         icon: 'none',
         duration: 2000,
       });
@@ -118,7 +136,11 @@ class Request {
   }
 
   // Convenience methods
-  public get<T = any>(url: string, data?: any, config?: Partial<RequestConfig>): Promise<ApiResponse<T>> {
+  public get<T = unknown>(
+    url: string,
+    data?: Record<string, unknown>,
+    config?: Partial<RequestConfig>
+  ): Promise<ApiResponse<T>> {
     return this.request<T>({
       url,
       method: 'GET',
@@ -127,7 +149,11 @@ class Request {
     });
   }
 
-  public post<T = any>(url: string, data?: any, config?: Partial<RequestConfig>): Promise<ApiResponse<T>> {
+  public post<T = unknown>(
+    url: string,
+    data?: Record<string, unknown> | unknown[],
+    config?: Partial<RequestConfig>
+  ): Promise<ApiResponse<T>> {
     return this.request<T>({
       url,
       method: 'POST',
@@ -136,7 +162,11 @@ class Request {
     });
   }
 
-  public put<T = any>(url: string, data?: any, config?: Partial<RequestConfig>): Promise<ApiResponse<T>> {
+  public put<T = unknown>(
+    url: string,
+    data?: Record<string, unknown> | unknown[],
+    config?: Partial<RequestConfig>
+  ): Promise<ApiResponse<T>> {
     return this.request<T>({
       url,
       method: 'PUT',
@@ -145,7 +175,11 @@ class Request {
     });
   }
 
-  public delete<T = any>(url: string, data?: any, config?: Partial<RequestConfig>): Promise<ApiResponse<T>> {
+  public delete<T = unknown>(
+    url: string,
+    data?: Record<string, unknown>,
+    config?: Partial<RequestConfig>
+  ): Promise<ApiResponse<T>> {
     return this.request<T>({
       url,
       method: 'DELETE',

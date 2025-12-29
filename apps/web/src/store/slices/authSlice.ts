@@ -6,6 +6,8 @@ const initialState: AuthState = {
   accessToken: null,
   refreshToken: null,
   isAuthenticated: false,
+  currentRole: null,
+  availableRoles: undefined,
   loading: false,
   error: null,
 };
@@ -14,11 +16,46 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setCredentials: (state, action: PayloadAction<{
-      accessToken: string;
-      refreshToken: string;
-      expiresIn: number;
-    }>) => {
+    loginStart: (state) => {
+      state.loading = true;
+      state.error = null;
+    },
+    loginSuccess: (
+      state,
+      action: PayloadAction<{
+        user: User;
+        accessToken: string;
+        refreshToken: string;
+        availableRoles?: AuthState['availableRoles'];
+      }>
+    ) => {
+      state.user = action.payload.user;
+      state.accessToken = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
+      state.isAuthenticated = true;
+      state.currentRole = action.payload.user.role;
+      state.availableRoles = action.payload.availableRoles;
+      state.loading = false;
+      state.error = null;
+    },
+    loginFailure: (state, action: PayloadAction<string>) => {
+      state.user = null;
+      state.accessToken = null;
+      state.refreshToken = null;
+      state.isAuthenticated = false;
+      state.currentRole = null;
+      state.availableRoles = undefined;
+      state.loading = false;
+      state.error = action.payload;
+    },
+    setCredentials: (
+      state,
+      action: PayloadAction<{
+        accessToken: string;
+        refreshToken: string;
+        expiresIn: number;
+      }>
+    ) => {
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.isAuthenticated = true;
@@ -26,6 +63,27 @@ const authSlice = createSlice({
     },
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
+      state.currentRole = action.payload.role;
+    },
+    selectRole: (
+      state,
+      action: PayloadAction<{
+        role: 'admin' | 'sub_admin' | 'supplier' | 'store';
+        roleId?: number;
+        accessToken?: string;
+      }>
+    ) => {
+      if (state.user) {
+        state.user.role = action.payload.role;
+        state.user.roleId = action.payload.roleId;
+      }
+      state.currentRole = action.payload.role;
+      if (action.payload.accessToken) {
+        state.accessToken = action.payload.accessToken;
+      }
+    },
+    updateToken: (state, action: PayloadAction<string>) => {
+      state.accessToken = action.payload;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
@@ -38,6 +96,9 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
+      state.currentRole = null;
+      state.availableRoles = undefined;
+      state.loading = false;
       state.error = null;
     },
     clearError: (state) => {
@@ -47,8 +108,13 @@ const authSlice = createSlice({
 });
 
 export const {
+  loginStart,
+  loginSuccess,
+  loginFailure,
   setCredentials,
   setUser,
+  selectRole,
+  updateToken,
   setLoading,
   setError,
   logout,

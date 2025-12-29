@@ -51,7 +51,9 @@ const SImageUpload: React.FC<SImageUploadProps> = ({
 
     setPreviewImage(file.url || (file.preview as string));
     setPreviewOpen(true);
-    setPreviewTitle(file.name || file.url!.substring(file.url!.lastIndexOf('/') + 1));
+    setPreviewTitle(
+      file.name || (file.url ? file.url.substring(file.url.lastIndexOf('/') + 1) : '预览')
+    );
   };
 
   const handleChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {

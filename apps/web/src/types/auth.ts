@@ -22,6 +22,8 @@ export interface User {
   email?: string;
   avatar?: string;
   lastLoginAt?: string;
+  permissions?: string[];
+  displayName?: string;
 }
 
 export interface RoleInfo {
@@ -36,8 +38,12 @@ export interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  currentRole: 'admin' | 'sub_admin' | 'supplier' | 'store' | null;
+  availableRoles?: RoleInfo[];
   loading: boolean;
   error: string | null;
+  permissions?: string[];
+  displayName?: string;
 }
 
 export interface SelectRoleRequest {

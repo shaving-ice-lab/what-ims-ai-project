@@ -1,13 +1,13 @@
 'use client';
 
-import React from 'react';
-import { Card, Row, Col, Button, Typography, message } from 'antd';
-import { UserOutlined, ShopOutlined, HomeOutlined, SettingOutlined } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
-import { useDispatch, useSelector } from 'react-redux';
-import { selectRole } from '@/store/slices/userSlice';
 import { RootState } from '@/store';
+import { selectRole } from '@/store/slices/authSlice';
 import { http } from '@/utils/request';
+import { HomeOutlined, SettingOutlined, ShopOutlined } from '@ant-design/icons';
+import { Button, Card, Col, Row, Typography, message } from 'antd';
+import { useRouter } from 'next/navigation';
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import styles from './select-role.module.css';
 
 const { Title, Text } = Typography;
@@ -42,17 +42,19 @@ export default function SelectRolePage() {
     setLoading(true);
     try {
       const res = await http.post('/auth/select-role', { role, roleId });
-      
-      dispatch(selectRole({
-        role: role as any,
-        roleId,
-        token: res.data.token,
-      }));
-      
+
+      dispatch(
+        selectRole({
+          role: role as any,
+          roleId,
+          token: res.data.token,
+        })
+      );
+
       localStorage.setItem('token', res.data.token);
-      
+
       message.success('角色切换成功');
-      
+
       // 根据角色跳转到对应页面
       switch (role) {
         case 'admin':
@@ -104,10 +106,12 @@ export default function SelectRolePage() {
         </Row>
 
         <div className={styles.footer}>
-          <Button onClick={() => {
-            localStorage.clear();
-            router.push('/login');
-          }}>
+          <Button
+            onClick={() => {
+              localStorage.clear();
+              router.push('/login');
+            }}
+          >
             退出登录
           </Button>
         </div>

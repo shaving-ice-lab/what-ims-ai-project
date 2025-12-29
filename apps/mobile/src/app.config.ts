@@ -8,14 +8,18 @@ export default defineAppConfig({
     'pages/order/index',
     'pages/mine/index',
     // 供应商页面
-    'pages/supplier/index',
+    'pages/supplier/index/index',
     'pages/supplier/orders/index',
+    'pages/supplier/orders/detail/index',
     'pages/supplier/price/index',
+    'pages/supplier/profile/index',
     // 管理员页面
-    'pages/admin/index',
+    'pages/admin/index/index',
     'pages/admin/orders/index',
     'pages/admin/stores/index',
     'pages/admin/suppliers/index',
+    'pages/admin/search/index',
+    'pages/admin/profile/index',
   ],
   window: {
     backgroundTextStyle: 'light',

@@ -1,6 +1,5 @@
 'use client';
 
-import '@/assets/css/antd-custom.css';
 import { persistor, store } from '@/store';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';

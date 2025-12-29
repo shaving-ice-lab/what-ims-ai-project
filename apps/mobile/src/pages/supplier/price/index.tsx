@@ -1,6 +1,8 @@
-import { ScrollView, Text, View } from '@tarojs/components';
-import Taro from '@tarojs/taro';
 import { useState } from 'react';
+
+import { Input, ScrollView, Text, View } from '@tarojs/components';
+import Taro from '@tarojs/taro';
+
 import './index.scss';
 
 interface PriceItem {
@@ -12,6 +14,12 @@ interface PriceItem {
   originalPrice: number | null;
   stock: boolean;
   category: string;
+}
+
+interface EditModalData {
+  visible: boolean;
+  item: PriceItem | null;
+  newPrice: string;
 }
 
 // 模拟价格数据
@@ -70,6 +78,21 @@ const priceData: PriceItem[] = [
 
 export default function SupplierPricePage() {
   const [refreshing, setRefreshing] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [materials, setMaterials] = useState<PriceItem[]>(priceData);
+  const [editModal, setEditModal] = useState<EditModalData>({
+    visible: false,
+    item: null,
+    newPrice: '',
+  });
+
+  // 搜索过滤
+  const filteredMaterials = materials.filter(
+    (item) =>
+      item.name.includes(searchKeyword) ||
+      item.brand.includes(searchKeyword) ||
+      item.category.includes(searchKeyword)
+  );
 
   // 下拉刷新
   const handleRefresh = () => {
@@ -80,11 +103,35 @@ export default function SupplierPricePage() {
     }, 1000);
   };
 
-  // 编辑价格
+  // 打开编辑价格弹窗
   const handleEditPrice = (item: PriceItem) => {
-    Taro.navigateTo({
-      url: `/pages/supplier/price/edit/index?id=${item.id}&name=${item.name}&price=${item.price}`,
+    setEditModal({
+      visible: true,
+      item,
+      newPrice: item.price.toString(),
     });
+  };
+
+  // 关闭编辑弹窗
+  const handleCloseModal = () => {
+    setEditModal({ visible: false, item: null, newPrice: '' });
+  };
+
+  // 保存价格
+  const handleSavePrice = () => {
+    if (!editModal.item || !editModal.newPrice) return;
+
+    const newPrice = parseFloat(editModal.newPrice);
+    if (isNaN(newPrice) || newPrice <= 0) {
+      Taro.showToast({ title: '请输入有效价格', icon: 'none' });
+      return;
+    }
+
+    setMaterials((prev) =>
+      prev.map((m) => (m.id === editModal.item!.id ? { ...m, price: newPrice } : m))
+    );
+    handleCloseModal();
+    Taro.showToast({ title: '价格已更新', icon: 'success' });
   };
 
   // 切换库存状态
@@ -94,6 +141,9 @@ export default function SupplierPricePage() {
       content: `确定将"${item.name}"设为${item.stock ? '缺货' : '有货'}？`,
       success: (res) => {
         if (res.confirm) {
+          setMaterials((prev) =>
+            prev.map((m) => (m.id === item.id ? { ...m, stock: !m.stock } : m))
+          );
           Taro.showToast({ title: '状态已更新', icon: 'success' });
         }
       },
@@ -102,6 +152,24 @@ export default function SupplierPricePage() {
 
   return (
     <View className="supplier-price-page">
+      {/* 搜索栏 */}
+      <View className="search-bar">
+        <View className="search-input-wrap">
+          <Text className="search-icon">🔍</Text>
+          <Input
+            className="search-input"
+            placeholder="搜索物料名称/品牌/分类"
+            value={searchKeyword}
+            onInput={(e) => setSearchKeyword(e.detail.value)}
+          />
+          {searchKeyword && (
+            <Text className="clear-btn" onClick={() => setSearchKeyword('')}>
+              ✕
+            </Text>
+          )}
+        </View>
+      </View>
+
       {/* 提示栏 */}
       <View className="tips-bar">
         <Text className="tips-text">💡 点击价格可快速修改，点击库存状态可切换</Text>
@@ -114,35 +182,83 @@ export default function SupplierPricePage() {
         refresherTriggered={refreshing}
         onRefresherRefresh={handleRefresh}
       >
-        {priceData.map((item) => (
-          <View key={item.id} className="price-card">
-            <View className="card-main">
-              <View className="item-info">
-                <Text className="item-name">{item.name}</Text>
-                <Text className="item-spec">
-                  {item.brand} · {item.spec}
-                </Text>
+        {filteredMaterials.length === 0 ? (
+          <View className="empty-list">
+            <Text className="empty-icon">📦</Text>
+            <Text className="empty-text">暂无物料</Text>
+          </View>
+        ) : (
+          filteredMaterials.map((item) => (
+            <View key={item.id} className="price-card">
+              <View className="card-main">
+                <View className="item-info">
+                  <Text className="item-name">{item.name}</Text>
+                  <Text className="item-spec">
+                    {item.brand} · {item.spec}
+                  </Text>
+                </View>
+                <View className="item-price" onClick={() => handleEditPrice(item)}>
+                  <Text className="price-value">¥{item.price.toFixed(2)}</Text>
+                  {item.originalPrice && (
+                    <Text className="original-price">¥{item.originalPrice.toFixed(2)}</Text>
+                  )}
+                  <Text className="edit-hint">点击修改</Text>
+                </View>
               </View>
-              <View className="item-price" onClick={() => handleEditPrice(item)}>
-                <Text className="price-value">¥{item.price.toFixed(2)}</Text>
-                {item.originalPrice && (
-                  <Text className="original-price">¥{item.originalPrice.toFixed(2)}</Text>
-                )}
-                <Text className="edit-hint">点击修改</Text>
+              <View className="card-footer">
+                <Text className="category-tag">{item.category}</Text>
+                <View
+                  className={`stock-status ${item.stock ? 'in-stock' : 'out-stock'}`}
+                  onClick={() => handleToggleStock(item)}
+                >
+                  <Text>{item.stock ? '有货' : '缺货'}</Text>
+                </View>
               </View>
             </View>
-            <View className="card-footer">
-              <Text className="category-tag">{item.category}</Text>
-              <View
-                className={`stock-status ${item.stock ? 'in-stock' : 'out-stock'}`}
-                onClick={() => handleToggleStock(item)}
-              >
-                <Text>{item.stock ? '有货' : '缺货'}</Text>
+          ))
+        )}
+      </ScrollView>
+
+      {/* 编辑价格弹窗 */}
+      {editModal.visible && editModal.item && (
+        <View className="modal-overlay" onClick={handleCloseModal}>
+          <View className="edit-modal" onClick={(e) => e.stopPropagation()}>
+            <View className="modal-header">
+              <Text className="modal-title">修改价格</Text>
+              <Text className="modal-close" onClick={handleCloseModal}>
+                ✕
+              </Text>
+            </View>
+            <View className="modal-body">
+              <Text className="item-name">{editModal.item.name}</Text>
+              <Text className="item-spec">
+                {editModal.item.brand} · {editModal.item.spec}
+              </Text>
+              <View className="price-input-wrap">
+                <Text className="price-label">价格</Text>
+                <View className="price-input-box">
+                  <Text className="currency">¥</Text>
+                  <Input
+                    className="price-input"
+                    type="digit"
+                    value={editModal.newPrice}
+                    onInput={(e) => setEditModal({ ...editModal, newPrice: e.detail.value })}
+                    focus
+                  />
+                </View>
+              </View>
+            </View>
+            <View className="modal-footer">
+              <View className="modal-btn cancel" onClick={handleCloseModal}>
+                <Text>取消</Text>
+              </View>
+              <View className="modal-btn confirm" onClick={handleSavePrice}>
+                <Text>保存</Text>
               </View>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        </View>
+      )}
     </View>
   );
 }

@@ -9,6 +9,10 @@ interface SystemConfig {
   refreshTokenExpireDays: number;
   orderAutoConfirmHours: number;
   orderAutoCompleteDays: number;
+  orderCancelThreshold: number;
+  paymentTimeout: number;
+  webhookRetryTimes: number;
+  webhookRetryInterval: number;
 }
 
 interface SystemState {
@@ -43,6 +47,10 @@ const initialState: SystemState = {
     refreshTokenExpireDays: 7,
     orderAutoConfirmHours: 24,
     orderAutoCompleteDays: 7,
+    orderCancelThreshold: 60,
+    paymentTimeout: 15,
+    webhookRetryTimes: 3,
+    webhookRetryInterval: 5,
   },
   notifications: [],
 };
@@ -69,7 +77,10 @@ const systemSlice = createSlice({
     setConfig: (state, action: PayloadAction<Partial<SystemConfig>>) => {
       state.config = { ...state.config, ...action.payload };
     },
-    addNotification: (state, action: PayloadAction<Omit<Notification, 'id' | 'timestamp' | 'read'>>) => {
+    addNotification: (
+      state,
+      action: PayloadAction<Omit<Notification, 'id' | 'timestamp' | 'read'>>
+    ) => {
       const notification: Notification = {
         ...action.payload,
         id: `${Date.now()}_${Math.random()}`,
@@ -83,13 +94,13 @@ const systemSlice = createSlice({
       }
     },
     markNotificationAsRead: (state, action: PayloadAction<string>) => {
-      const notification = state.notifications.find(n => n.id === action.payload);
+      const notification = state.notifications.find((n) => n.id === action.payload);
       if (notification) {
         notification.read = true;
       }
     },
     markAllNotificationsAsRead: (state) => {
-      state.notifications.forEach(n => {
+      state.notifications.forEach((n) => {
         n.read = true;
       });
     },

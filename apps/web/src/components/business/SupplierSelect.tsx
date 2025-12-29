@@ -91,7 +91,8 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     if (fetchSuppliers && suppliers.length === 0) {
       loadSuppliers();
     }
-  }, [fetchSuppliers, loadSuppliers, suppliers.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchSuppliers]);
 
   // 使用props传入的suppliers
   useEffect(() => {

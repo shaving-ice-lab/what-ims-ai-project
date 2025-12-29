@@ -163,16 +163,8 @@ const MaterialSelect: React.FC<MaterialSelectProps> = ({
       const selected = materials.filter((m) => value.includes(m.id));
       setSelectedMaterials(selected);
     }
-  }, [
-    visible,
-    fetchMaterials,
-    fetchCategories,
-    loadMaterials,
-    loadCategories,
-    value,
-    materials,
-    categoryTree.length,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, value]);
 
   // 使用props传入的数据
   useEffect(() => {

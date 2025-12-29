@@ -114,7 +114,8 @@ const StoreSelect: React.FC<StoreSelectProps> = ({
     if (fetchStores && stores.length === 0) {
       loadStores();
     }
-  }, [fetchStores, loadStores, stores.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchStores]);
 
   // 使用props传入的stores
   useEffect(() => {

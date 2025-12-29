@@ -1,38 +1,49 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { MMKV } from 'react-native-mmkv';
+import Taro from '@tarojs/taro';
 import { persistReducer, persistStore } from 'redux-persist';
+
 import authReducer from './slices/authSlice';
 import cartReducer from './slices/cartSlice';
 import systemReducer from './slices/systemSlice';
 
-// MMKV storage for React Native / Taro
-const storage = new MMKV();
-
-const reduxMMKVStorage = {
+// Taro storage adapter for redux-persist
+const taroStorage = {
   setItem: (key: string, value: string) => {
-    storage.set(key, value);
-    return Promise.resolve(true);
+    try {
+      Taro.setStorageSync(key, value);
+      return Promise.resolve(true);
+    } catch (error) {
+      return Promise.reject(error);
+    }
   },
   getItem: (key: string) => {
-    const value = storage.getString(key);
-    return Promise.resolve(value);
+    try {
+      const value = Taro.getStorageSync(key);
+      return Promise.resolve(value);
+    } catch (error) {
+      return Promise.resolve(undefined);
+    }
   },
   removeItem: (key: string) => {
-    storage.delete(key);
-    return Promise.resolve();
+    try {
+      Taro.removeStorageSync(key);
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    }
   },
 };
 
 const authPersistConfig = {
   key: 'auth',
-  storage: reduxMMKVStorage,
-  whitelist: ['user', 'token', 'refreshToken', 'currentRole']
+  storage: taroStorage,
+  whitelist: ['user', 'token', 'refreshToken', 'currentRole'],
 };
 
 const cartPersistConfig = {
   key: 'cart',
-  storage: reduxMMKVStorage,
-  whitelist: ['items']
+  storage: taroStorage,
+  whitelist: ['items'],
 };
 
 const persistedAuthReducer = persistReducer(authPersistConfig, authReducer);

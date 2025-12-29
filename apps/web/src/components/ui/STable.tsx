@@ -35,8 +35,28 @@ function STable<T extends object = object>({
   onChange,
   ...rest
 }: STableProps<T>) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // 从pagination prop或defaultPagination获取初始值
+  const initialPage =
+    (pagination && typeof pagination === 'object' ? pagination.current : undefined) ||
+    defaultPagination?.current ||
+    1;
+  const initialPageSize =
+    (pagination && typeof pagination === 'object' ? pagination.pageSize : undefined) ||
+    defaultPagination?.pageSize ||
+    10;
+
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [pageSize, setPageSize] = useState(initialPageSize);
+
+  // 使用受控模式时，从外部prop获取当前页码
+  const effectivePage =
+    pagination && typeof pagination === 'object' && pagination.current
+      ? pagination.current
+      : currentPage;
+  const effectivePageSize =
+    pagination && typeof pagination === 'object' && pagination.pageSize
+      ? pagination.pageSize
+      : pageSize;
 
   // 添加序号列
   const enhancedColumns: ColumnsType<T> = showIndex
@@ -46,7 +66,8 @@ function STable<T extends object = object>({
           key: '__index__',
           width: 60,
           align: 'center',
-          render: (_: unknown, __: T, index: number) => (currentPage - 1) * pageSize + index + 1,
+          render: (_: unknown, __: T, index: number) =>
+            (effectivePage - 1) * effectivePageSize + index + 1,
         },
         ...(columns || []),
       ]
@@ -54,8 +75,8 @@ function STable<T extends object = object>({
 
   // 默认分页配置
   const defaultPaginationConfig: TablePaginationConfig = {
-    current: currentPage,
-    pageSize: pageSize,
+    current: effectivePage,
+    pageSize: effectivePageSize,
     showSizeChanger: true,
     showQuickJumper: true,
     showTotal: (total) => `共 ${total} 条`,
@@ -70,15 +91,20 @@ function STable<T extends object = object>({
       filters: Record<string, FilterValue | null>,
       sorter: SorterResult<T> | SorterResult<T>[]
     ) => {
-      if (newPagination.current) {
-        setCurrentPage(newPagination.current);
+      // 只在非受控模式下更新内部状态
+      if (!pagination || typeof pagination !== 'object' || !pagination.current) {
+        if (newPagination.current) {
+          setCurrentPage(newPagination.current);
+        }
       }
-      if (newPagination.pageSize) {
-        setPageSize(newPagination.pageSize);
+      if (!pagination || typeof pagination !== 'object' || !pagination.pageSize) {
+        if (newPagination.pageSize) {
+          setPageSize(newPagination.pageSize);
+        }
       }
       onChange?.(newPagination, filters, sorter);
     },
-    [onChange]
+    [onChange, pagination]
   );
 
   return (
