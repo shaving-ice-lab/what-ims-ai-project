@@ -1,6 +1,7 @@
 # Dependencies
 node_modules
 .pnpm-debug.log*
+pnpm-lock.yaml
 
 # Build outputs
 dist
@@ -30,3 +31,15 @@ yarn-error.log*
 
 # Testing
 coverage
+
+# Local scripts and temporary files
+.ask_continue_port
+.ask_continue_response.txt
+ask_continue_http.ps1
+.windsurfrules
+
+# Session progress and summary files
+DEVELOPMENT_PROGRESS.md
+FRONTEND_COMPLETION_SUMMARY.md
+FRONTEND_SUMMARY.md
+SESSION_COMPLETION_SUMMARY*.md

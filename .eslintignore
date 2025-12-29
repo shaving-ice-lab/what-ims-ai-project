@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Configuration
+*.config.js
+*.config.ts
+next.config.js
+next.config.mjs
+vite.config.ts
+tailwind.config.js
+postcss.config.js
+
+# Generated files
+coverage/
+*.min.js
+*.min.css
+
+# Backend
+apps/backend/
+*.go
+
+# Public assets
+public/
