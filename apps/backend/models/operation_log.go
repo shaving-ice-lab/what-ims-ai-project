@@ -91,3 +91,56 @@ func (o *OperationLog) SetRequestInfo(ip, userAgent, url, method string) *Operat
 	}
 	return o
 }
+
+// LogRetentionDays 日志保留天数
+const LogRetentionDays = 90
+
+// CleanupOldLogs 清理超过保留期的日志
+// 日志保留策略：保留90天，定期清理
+func CleanupOldLogs(db *gorm.DB) (int64, error) {
+	cutoffDate := time.Now().AddDate(0, 0, -LogRetentionDays)
+	result := db.Unscoped().Where("created_at < ?", cutoffDate).Delete(&OperationLog{})
+	return result.RowsAffected, result.Error
+}
+
+// CleanupOldLoginLogs 清理超过保留期的登录日志
+func CleanupOldLoginLogs(db *gorm.DB) (int64, error) {
+	cutoffDate := time.Now().AddDate(0, 0, -LogRetentionDays)
+	result := db.Unscoped().Where("login_at < ?", cutoffDate).Delete(&LoginLog{})
+	return result.RowsAffected, result.Error
+}
+
+// CleanupOldWebhookLogs 清理超过保留期的Webhook日志
+func CleanupOldWebhookLogs(db *gorm.DB) (int64, error) {
+	cutoffDate := time.Now().AddDate(0, 0, -LogRetentionDays)
+	result := db.Unscoped().Where("created_at < ?", cutoffDate).Delete(&WebhookLog{})
+	return result.RowsAffected, result.Error
+}
+
+// CleanupAllOldLogs 清理所有类型的过期日志
+func CleanupAllOldLogs(db *gorm.DB) (map[string]int64, error) {
+	results := make(map[string]int64)
+
+	// 清理操作日志
+	count, err := CleanupOldLogs(db)
+	if err != nil {
+		return results, err
+	}
+	results["operation_logs"] = count
+
+	// 清理登录日志
+	count, err = CleanupOldLoginLogs(db)
+	if err != nil {
+		return results, err
+	}
+	results["login_logs"] = count
+
+	// 清理Webhook日志
+	count, err = CleanupOldWebhookLogs(db)
+	if err != nil {
+		return results, err
+	}
+	results["webhook_logs"] = count
+
+	return results, nil
+}

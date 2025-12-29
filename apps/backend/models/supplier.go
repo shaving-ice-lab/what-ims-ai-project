@@ -85,8 +85,11 @@ type Supplier struct {
 	HasBackend       int8           `gorm:"type:tinyint(1);default:1" json:"has_backend"`
 	WechatWebhookURL *string        `gorm:"type:varchar(500)" json:"wechat_webhook_url"`
 	WebhookEnabled   int8           `gorm:"type:tinyint(1);default:0" json:"webhook_enabled"`
-	WebhookEvents    WebhookEvents  `gorm:"type:json" json:"webhook_events"`
-	APIEndpoint      *string        `gorm:"type:varchar(500)" json:"api_endpoint"`
+	WebhookEvents        WebhookEvents  `gorm:"type:json" json:"webhook_events"`
+	WebhookRetryTimes    int            `gorm:"default:3" json:"webhook_retry_times"`
+	WebhookRetryInterval int            `gorm:"default:60" json:"webhook_retry_interval"`
+	WebhookTimeout       int            `gorm:"default:30" json:"webhook_timeout"`
+	APIEndpoint          *string        `gorm:"type:varchar(500)" json:"api_endpoint"`
 	APISecretKey     *string        `gorm:"type:varchar(100)" json:"-"` // Encrypted storage
 	MarkupEnabled    int8           `gorm:"type:tinyint(1);default:1" json:"markup_enabled"`
 	Remark           *string        `gorm:"type:text" json:"remark"`

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/project/backend/models"
@@ -165,10 +166,13 @@ func SeedInitialData(db *gorm.DB) error {
 	}
 
 	// Create default admin user
+	// Default password: Admin@123 (bcrypt hash with cost 10)
+	// Users should change this password after first login
 	adminUser := &models.User{
 		Username:     "admin",
-		PasswordHash: "$2a$10$YourHashedPasswordHere", // TODO: Generate proper password hash
+		PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqbOH1OJyqqqVnKLBa1xLxDBJ.S3.", // Admin@123
 		Role:         models.RoleAdmin,
+		Phone:        "13800000000",
 		Status:       1,
 	}
 
@@ -177,35 +181,112 @@ func SeedInitialData(db *gorm.DB) error {
 	}
 
 	// Create admin record
+	permissions := models.Permissions{"order", "supplier", "store", "material", "report", "system", "user"}
 	admin := &models.Admin{
-		UserID:    adminUser.ID,
-		Name:      "系统管理员",
-		IsPrimary: 1,
-		Status:    1,
+		UserID:      adminUser.ID,
+		Name:        "系统管理员",
+		IsPrimary:   1,
+		Permissions: permissions,
+		Status:      1,
 	}
 
 	if err := db.Create(admin).Error; err != nil {
 		return err
 	}
 
-	// Create default categories
-	categories := []models.Category{
-		{Name: "蔬菜", SortOrder: 1, Level: 1, Status: 1},
-		{Name: "水果", SortOrder: 2, Level: 1, Status: 1},
-		{Name: "肉类", SortOrder: 3, Level: 1, Status: 1},
-		{Name: "海鲜", SortOrder: 4, Level: 1, Status: 1},
-		{Name: "粮油", SortOrder: 5, Level: 1, Status: 1},
-		{Name: "调料", SortOrder: 6, Level: 1, Status: 1},
-		{Name: "饮料", SortOrder: 7, Level: 1, Status: 1},
-		{Name: "其他", SortOrder: 99, Level: 1, Status: 1},
+	log.Printf("Default admin user created: username=admin, password=Admin@123")
+
+	// Seed default categories
+	if err := seedCategories(db); err != nil {
+		log.Printf("Failed to seed categories: %v", err)
 	}
 
-	for _, category := range categories {
-		if err := db.Create(&category).Error; err != nil {
-			log.Printf("Failed to create category %s: %v", category.Name, err)
-		}
+	// Initialize default system configs
+	if err := models.InitDefaultConfigs(db); err != nil {
+		log.Printf("Failed to init default configs: %v", err)
+	} else {
+		log.Println("Default system configs initialized")
 	}
 
 	log.Println("Initial data seeded successfully")
+	return nil
+}
+
+// seedCategories creates default material categories
+func seedCategories(db *gorm.DB) error {
+	// Check if categories already exist
+	var count int64
+	db.Model(&models.Category{}).Count(&count)
+	if count > 0 {
+		return nil
+	}
+
+	// Create top-level categories
+	topCategories := []models.Category{
+		{Name: "蔬菜", Icon: "vegetable", SortOrder: 1, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "水果", Icon: "fruit", SortOrder: 2, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "肉类", Icon: "meat", SortOrder: 3, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "海鲜水产", Icon: "seafood", SortOrder: 4, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "粮油米面", Icon: "grain", SortOrder: 5, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "调味品", Icon: "condiment", SortOrder: 6, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "乳制品", Icon: "dairy", SortOrder: 7, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "冷冻食品", Icon: "frozen", SortOrder: 8, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "饮料酒水", Icon: "beverage", SortOrder: 9, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "干货杂粮", Icon: "dried", SortOrder: 10, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "烘焙原料", Icon: "baking", SortOrder: 11, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "餐厨用品", Icon: "kitchen", SortOrder: 12, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "其他", Icon: "other", SortOrder: 99, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+	}
+
+	for i := range topCategories {
+		if err := db.Create(&topCategories[i]).Error; err != nil {
+			log.Printf("Failed to create category %s: %v", topCategories[i].Name, err)
+			continue
+		}
+		// Update path after ID is assigned
+		topCategories[i].Path = fmt.Sprintf("%d", topCategories[i].ID)
+		db.Model(&topCategories[i]).Update("path", topCategories[i].Path)
+	}
+
+	// Create sub-categories for vegetables
+	var vegCategory models.Category
+	if err := db.Where("name = ?", "蔬菜").First(&vegCategory).Error; err == nil {
+		subCategories := []models.Category{
+			{Name: "叶菜类", ParentID: &vegCategory.ID, SortOrder: 1, Level: 2, Path: fmt.Sprintf("%d", vegCategory.ID), MarkupEnabled: 1, Status: 1},
+			{Name: "根茎类", ParentID: &vegCategory.ID, SortOrder: 2, Level: 2, Path: fmt.Sprintf("%d", vegCategory.ID), MarkupEnabled: 1, Status: 1},
+			{Name: "茄果类", ParentID: &vegCategory.ID, SortOrder: 3, Level: 2, Path: fmt.Sprintf("%d", vegCategory.ID), MarkupEnabled: 1, Status: 1},
+			{Name: "菌菇类", ParentID: &vegCategory.ID, SortOrder: 4, Level: 2, Path: fmt.Sprintf("%d", vegCategory.ID), MarkupEnabled: 1, Status: 1},
+			{Name: "豆类", ParentID: &vegCategory.ID, SortOrder: 5, Level: 2, Path: fmt.Sprintf("%d", vegCategory.ID), MarkupEnabled: 1, Status: 1},
+		}
+		for i := range subCategories {
+			if err := db.Create(&subCategories[i]).Error; err != nil {
+				log.Printf("Failed to create sub-category %s: %v", subCategories[i].Name, err)
+				continue
+			}
+			subCategories[i].Path = fmt.Sprintf("%d/%d", vegCategory.ID, subCategories[i].ID)
+			db.Model(&subCategories[i]).Update("path", subCategories[i].Path)
+		}
+	}
+
+	// Create sub-categories for meat
+	var meatCategory models.Category
+	if err := db.Where("name = ?", "肉类").First(&meatCategory).Error; err == nil {
+		subCategories := []models.Category{
+			{Name: "猪肉", ParentID: &meatCategory.ID, SortOrder: 1, Level: 2, Path: fmt.Sprintf("%d", meatCategory.ID), MarkupEnabled: 1, Status: 1},
+			{Name: "牛肉", ParentID: &meatCategory.ID, SortOrder: 2, Level: 2, Path: fmt.Sprintf("%d", meatCategory.ID), MarkupEnabled: 1, Status: 1},
+			{Name: "羊肉", ParentID: &meatCategory.ID, SortOrder: 3, Level: 2, Path: fmt.Sprintf("%d", meatCategory.ID), MarkupEnabled: 1, Status: 1},
+			{Name: "禽类", ParentID: &meatCategory.ID, SortOrder: 4, Level: 2, Path: fmt.Sprintf("%d", meatCategory.ID), MarkupEnabled: 1, Status: 1},
+		}
+		for i := range subCategories {
+			if err := db.Create(&subCategories[i]).Error; err != nil {
+				log.Printf("Failed to create sub-category %s: %v", subCategories[i].Name, err)
+				continue
+			}
+			subCategories[i].Path = fmt.Sprintf("%d/%d", meatCategory.ID, subCategories[i].ID)
+			db.Model(&subCategories[i]).Update("path", subCategories[i].Path)
+		}
+	}
+
+	log.Println("Default categories seeded successfully")
 	return nil
 }

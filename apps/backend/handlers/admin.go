@@ -480,15 +480,22 @@ func UpdateSupplier(db *gorm.DB) echo.HandlerFunc {
 		}
 
 		type UpdateSupplierRequest struct {
-			Name           string  `json:"name"`
-			Contact        string  `json:"contact"`
-			Phone          string  `json:"phone"`
-			Email          string  `json:"email"`
-			Address        string  `json:"address"`
-			MinOrderAmount float64 `json:"minOrderAmount"`
-			DeliveryMode   string  `json:"deliveryMode"`
-			DeliveryDays   []int   `json:"deliveryDays"`
-			Status         uint8   `json:"status"`
+			Name                 string   `json:"name"`
+			DisplayName          string   `json:"displayName"`
+			Contact              string   `json:"contact"`
+			Phone                string   `json:"phone"`
+			Email                string   `json:"email"`
+			Address              string   `json:"address"`
+			MinOrderAmount       float64  `json:"minOrderAmount"`
+			DeliveryMode         string   `json:"deliveryMode"`
+			DeliveryDays         []int    `json:"deliveryDays"`
+			Status               uint8    `json:"status"`
+			WebhookURL           string   `json:"webhookUrl"`
+			WebhookEnabled       *bool    `json:"webhookEnabled"`
+			WebhookEvents        []string `json:"webhookEvents"`
+			WebhookRetryTimes    *int     `json:"webhookRetryTimes"`
+			WebhookRetryInterval *int     `json:"webhookRetryInterval"`
+			WebhookTimeout       *int     `json:"webhookTimeout"`
 		}
 
 		var req UpdateSupplierRequest
@@ -500,11 +507,14 @@ func UpdateSupplier(db *gorm.DB) echo.HandlerFunc {
 		if req.Name != "" {
 			updates["name"] = req.Name
 		}
+		if req.DisplayName != "" {
+			updates["display_name"] = req.DisplayName
+		}
 		if req.Contact != "" {
-			updates["contact"] = req.Contact
+			updates["contact_name"] = req.Contact
 		}
 		if req.Phone != "" {
-			updates["phone"] = req.Phone
+			updates["contact_phone"] = req.Phone
 		}
 		if req.Email != "" {
 			updates["email"] = req.Email
@@ -523,6 +533,28 @@ func UpdateSupplier(db *gorm.DB) echo.HandlerFunc {
 		}
 		if req.Status == 0 || req.Status == 1 {
 			updates["status"] = req.Status
+		}
+		if req.WebhookURL != "" {
+			updates["wechat_webhook_url"] = req.WebhookURL
+		}
+		if req.WebhookEnabled != nil {
+			if *req.WebhookEnabled {
+				updates["webhook_enabled"] = 1
+			} else {
+				updates["webhook_enabled"] = 0
+			}
+		}
+		if len(req.WebhookEvents) > 0 {
+			updates["webhook_events"] = models.WebhookEvents(req.WebhookEvents)
+		}
+		if req.WebhookRetryTimes != nil {
+			updates["webhook_retry_times"] = *req.WebhookRetryTimes
+		}
+		if req.WebhookRetryInterval != nil {
+			updates["webhook_retry_interval"] = *req.WebhookRetryInterval
+		}
+		if req.WebhookTimeout != nil {
+			updates["webhook_timeout"] = *req.WebhookTimeout
 		}
 
 		if err := db.Model(&models.Supplier{}).Where("id = ?", id).Updates(updates).Error; err != nil {

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -15,8 +16,9 @@ import (
 
 // LoginRequest 登录请求
 type LoginRequest struct {
-	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required"`
+	Username   string `json:"username" validate:"required"`
+	Password   string `json:"password" validate:"required"`
+	RememberMe bool   `json:"rememberMe"`
 }
 
 // LoginResponse 登录响应
@@ -120,26 +122,39 @@ func Login(db *gorm.DB, logger *zap.Logger) echo.HandlerFunc {
 			return ErrorResponse(c, http.StatusInternalServerError, "生成Token失败")
 		}
 
+		// 根据"记住我"选项设置refreshToken有效期
+		// 默认7天，勾选"记住我"则延长至30天
+		refreshTokenExpiry := 7 * 24 * time.Hour
+		if req.RememberMe {
+			refreshTokenExpiry = 30 * 24 * time.Hour
+		}
+
 		refreshToken, err := middleware.GenerateToken(
 			user.ID,
 			user.Role,
 			userInfo.RoleID,
 			sessionID,
 			"your-jwt-secret-key-change-in-production", // TODO: 从配置读取
-			7*24*time.Hour,
+			refreshTokenExpiry,
 		)
 		if err != nil {
 			logger.Error("Failed to generate refresh token", zap.Error(err))
 			return ErrorResponse(c, http.StatusInternalServerError, "生成Token失败")
 		}
 
+		// 计算refreshToken过期时间（秒）
+		refreshExpiresIn := int(refreshTokenExpiry.Seconds())
+
 		response := LoginResponse{
 			AccessToken:    accessToken,
 			RefreshToken:   refreshToken,
-			ExpiresIn:      7200, // 2小时
+			ExpiresIn:      7200, // accessToken 2小时
 			User:           userInfo,
 			AvailableRoles: availableRoles,
 		}
+
+		// 如果客户端需要知道refreshToken的过期时间，可以通过header返回
+		c.Response().Header().Set("X-Refresh-Expires-In", fmt.Sprintf("%d", refreshExpiresIn))
 
 		return SuccessResponse(c, response)
 	}

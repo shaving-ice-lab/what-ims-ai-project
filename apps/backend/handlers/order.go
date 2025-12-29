@@ -422,11 +422,187 @@ func CreateOrder(db *gorm.DB, redis *redis.Client) echo.HandlerFunc {
 	}
 }
 
-// CancelOrder 取消订单
+// CancelOrder 取消订单（1小时内自主取消）
 func CancelOrder(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现取消订单
-		return SuccessResponse(c, nil)
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		orderID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		type CancelRequest struct {
+			Reason string `json:"reason" validate:"required"`
+		}
+
+		var req CancelRequest
+		if err := c.Bind(&req); err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "请求参数错误")
+		}
+
+		// 查询订单
+		var order models.Order
+		if err := db.First(&order, orderID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+			}
+			return ErrorResponse(c, http.StatusInternalServerError, "查询失败")
+		}
+
+		// 验证订单归属
+		if order.StoreID != storeID {
+			return ErrorResponse(c, http.StatusForbidden, "无权操作此订单")
+		}
+
+		// 检查订单状态
+		if order.Status != models.OrderStatusPendingConfirm {
+			return ErrorResponse(c, http.StatusBadRequest, "当前订单状态不允许取消")
+		}
+
+		// 检查是否在1小时内
+		threshold := time.Hour * 1
+		if time.Since(order.CreatedAt) > threshold {
+			return ErrorResponse(c, http.StatusBadRequest, "订单已超过1小时，请提交取消申请")
+		}
+
+		// 执行取消
+		tx := db.Begin()
+		now := time.Now()
+		cancelledBy := models.CancelledByStore
+
+		updates := map[string]interface{}{
+			"status":          models.OrderStatusCancelled,
+			"cancel_reason":   req.Reason,
+			"cancelled_by":    cancelledBy,
+			"cancelled_by_id": storeID,
+			"cancelled_at":    now,
+		}
+
+		if err := tx.Model(&order).Updates(updates).Error; err != nil {
+			tx.Rollback()
+			return ErrorResponse(c, http.StatusInternalServerError, "取消订单失败")
+		}
+
+		// 创建状态日志
+		fromStatus := string(order.Status)
+		toStatus := string(models.OrderStatusCancelled)
+		operatorType := models.OperatorTypeStore
+		log := &models.OrderStatusLog{
+			OrderID:      orderID,
+			FromStatus:   &fromStatus,
+			ToStatus:     toStatus,
+			OperatorType: &operatorType,
+			OperatorID:   &storeID,
+			Remark:       &req.Reason,
+		}
+
+		if err := tx.Create(log).Error; err != nil {
+			tx.Rollback()
+			return ErrorResponse(c, http.StatusInternalServerError, "记录日志失败")
+		}
+
+		tx.Commit()
+
+		return SuccessResponse(c, map[string]interface{}{
+			"message": "订单已取消",
+		})
+	}
+}
+
+// SubmitCancelRequest 提交取消申请（超过1小时）
+func SubmitCancelRequest(db *gorm.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		orderID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		type CancelRequestBody struct {
+			Reason string `json:"reason" validate:"required"`
+		}
+
+		var req CancelRequestBody
+		if err := c.Bind(&req); err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "请求参数错误")
+		}
+
+		// 查询订单
+		var order models.Order
+		if err := db.First(&order, orderID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+			}
+			return ErrorResponse(c, http.StatusInternalServerError, "查询失败")
+		}
+
+		// 验证订单归属
+		if order.StoreID != storeID {
+			return ErrorResponse(c, http.StatusForbidden, "无权操作此订单")
+		}
+
+		// 检查订单状态
+		if order.Status != models.OrderStatusPendingConfirm && order.Status != models.OrderStatusConfirmed {
+			return ErrorResponse(c, http.StatusBadRequest, "当前订单状态不允许提交取消申请")
+		}
+
+		// 检查是否已有待处理的取消申请
+		var existingRequest models.OrderCancelRequest
+		err = db.Where("order_id = ? AND status = ?", orderID, models.CancelRequestPending).First(&existingRequest).Error
+		if err == nil {
+			return ErrorResponse(c, http.StatusConflict, "该订单已有待处理的取消申请")
+		}
+
+		// 创建取消申请
+		cancelRequest := &models.OrderCancelRequest{
+			OrderID: orderID,
+			StoreID: storeID,
+			Reason:  req.Reason,
+			Status:  models.CancelRequestPending,
+		}
+
+		if err := db.Create(cancelRequest).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "提交申请失败")
+		}
+
+		return SuccessResponse(c, map[string]interface{}{
+			"message":   "取消申请已提交，请等待审批",
+			"requestId": cancelRequest.ID,
+		})
+	}
+}
+
+// GetCancelRequestStatus 获取取消申请状态
+func GetCancelRequestStatus(db *gorm.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		orderID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		var request models.OrderCancelRequest
+		if err := db.Where("order_id = ? AND store_id = ?", orderID, storeID).
+			Order("created_at DESC").First(&request).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return ErrorResponse(c, http.StatusNotFound, "未找到取消申请")
+			}
+			return ErrorResponse(c, http.StatusInternalServerError, "查询失败")
+		}
+
+		return SuccessResponse(c, request)
 	}
 }
 
@@ -454,6 +630,209 @@ func GetPaymentStatus(db *gorm.DB) echo.HandlerFunc {
 		// TODO: 实现获取支付状态
 		return SuccessResponse(c, map[string]string{
 			"status": "unpaid",
+		})
+	}
+}
+
+// ExportOrdersExcel 导出订单Excel
+func ExportOrdersExcel(db *gorm.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		// 获取筛选参数
+		status := c.QueryParam("status")
+		supplierID := c.QueryParam("supplierId")
+		storeID := c.QueryParam("storeId")
+		startDate := c.QueryParam("startDate")
+		endDate := c.QueryParam("endDate")
+
+		// 构建查询
+		query := db.Model(&models.Order{})
+
+		if status != "" {
+			query = query.Where("status = ?", status)
+		}
+		if supplierID != "" {
+			query = query.Where("supplier_id = ?", supplierID)
+		}
+		if storeID != "" {
+			query = query.Where("store_id = ?", storeID)
+		}
+		if startDate != "" {
+			query = query.Where("created_at >= ?", startDate)
+		}
+		if endDate != "" {
+			query = query.Where("created_at <= ?", endDate+" 23:59:59")
+		}
+
+		// 根据角色过滤
+		if IsSupplier(c) {
+			supplierID := GetSupplierID(c)
+			query = query.Where("supplier_id = ?", supplierID)
+		} else if IsStore(c) {
+			storeID := GetStoreID(c)
+			query = query.Where("store_id = ?", storeID)
+		}
+
+		var orders []models.Order
+		if err := query.Preload("Store").Preload("Supplier").Preload("OrderItems").
+			Order("created_at DESC").Limit(5000).Find(&orders).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "查询订单失败")
+		}
+
+		// 构建导出数据
+		type ExportRow struct {
+			OrderNo          string  `json:"orderNo"`
+			StoreName        string  `json:"storeName"`
+			SupplierName     string  `json:"supplierName"`
+			GoodsAmount      float64 `json:"goodsAmount"`
+			ServiceFee       float64 `json:"serviceFee"`
+			TotalAmount      float64 `json:"totalAmount"`
+			MarkupTotal      float64 `json:"markupTotal"`
+			ItemCount        int     `json:"itemCount"`
+			Status           string  `json:"status"`
+			PaymentStatus    string  `json:"paymentStatus"`
+			DeliveryAddress  string  `json:"deliveryAddress"`
+			DeliveryContact  string  `json:"deliveryContact"`
+			DeliveryPhone    string  `json:"deliveryPhone"`
+			ExpectedDelivery string  `json:"expectedDelivery"`
+			Remark           string  `json:"remark"`
+			CreatedAt        string  `json:"createdAt"`
+		}
+
+		var exportData []ExportRow
+		statusMap := map[models.OrderStatus]string{
+			models.OrderStatusUnpaid:         "待付款",
+			models.OrderStatusPendingConfirm: "待确认",
+			models.OrderStatusConfirmed:      "已确认",
+			models.OrderStatusDelivering:     "配送中",
+			models.OrderStatusCompleted:      "已完成",
+			models.OrderStatusCancelled:      "已取消",
+		}
+
+		for _, order := range orders {
+			storeName := ""
+			if order.Store != nil {
+				storeName = order.Store.Name
+			}
+			supplierName := ""
+			if order.Supplier != nil {
+				supplierName = order.Supplier.Name
+			}
+			expectedDelivery := ""
+			if order.ExpectedDeliveryDate != nil {
+				expectedDelivery = order.ExpectedDeliveryDate.Format("2006-01-02")
+			}
+			remark := ""
+			if order.Remark != nil {
+				remark = *order.Remark
+			}
+
+			row := ExportRow{
+				OrderNo:          order.OrderNo,
+				StoreName:        storeName,
+				SupplierName:     supplierName,
+				GoodsAmount:      order.GoodsAmount,
+				ServiceFee:       order.ServiceFee,
+				TotalAmount:      order.TotalAmount,
+				MarkupTotal:      order.MarkupTotal,
+				ItemCount:        order.ItemCount,
+				Status:           statusMap[order.Status],
+				PaymentStatus:    string(order.PaymentStatus),
+				DeliveryAddress:  order.DeliveryAddress,
+				DeliveryContact:  order.DeliveryContact,
+				DeliveryPhone:    order.DeliveryPhone,
+				ExpectedDelivery: expectedDelivery,
+				Remark:           remark,
+				CreatedAt:        order.CreatedAt.Format("2006-01-02 15:04:05"),
+			}
+			exportData = append(exportData, row)
+		}
+
+		// 返回JSON数据，前端可以使用xlsx库生成Excel
+		return SuccessResponse(c, map[string]interface{}{
+			"columns": []map[string]string{
+				{"key": "orderNo", "title": "订单编号"},
+				{"key": "storeName", "title": "门店名称"},
+				{"key": "supplierName", "title": "供应商名称"},
+				{"key": "goodsAmount", "title": "商品金额"},
+				{"key": "serviceFee", "title": "服务费"},
+				{"key": "totalAmount", "title": "总金额"},
+				{"key": "markupTotal", "title": "加价金额"},
+				{"key": "itemCount", "title": "商品数量"},
+				{"key": "status", "title": "订单状态"},
+				{"key": "paymentStatus", "title": "支付状态"},
+				{"key": "deliveryAddress", "title": "配送地址"},
+				{"key": "deliveryContact", "title": "联系人"},
+				{"key": "deliveryPhone", "title": "联系电话"},
+				{"key": "expectedDelivery", "title": "预计配送日期"},
+				{"key": "remark", "title": "备注"},
+				{"key": "createdAt", "title": "下单时间"},
+			},
+			"data":  exportData,
+			"total": len(exportData),
+		})
+	}
+}
+
+// ExportOrderItemsExcel 导出订单明细Excel
+func ExportOrderItemsExcel(db *gorm.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		orderID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		var order models.Order
+		if err := db.Preload("OrderItems").First(&order, orderID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+			}
+			return ErrorResponse(c, http.StatusInternalServerError, "查询失败")
+		}
+
+		// 构建导出数据
+		type ItemExportRow struct {
+			MaterialName string  `json:"materialName"`
+			Brand        string  `json:"brand"`
+			Spec         string  `json:"spec"`
+			Unit         string  `json:"unit"`
+			Quantity     int     `json:"quantity"`
+			UnitPrice    float64 `json:"unitPrice"`
+			MarkupAmount float64 `json:"markupAmount"`
+			FinalPrice   float64 `json:"finalPrice"`
+			Subtotal     float64 `json:"subtotal"`
+		}
+
+		var exportData []ItemExportRow
+		for _, item := range order.OrderItems {
+			row := ItemExportRow{
+				MaterialName: item.MaterialName,
+				Brand:        item.Brand,
+				Spec:         item.Spec,
+				Unit:         item.Unit,
+				Quantity:     item.Quantity,
+				UnitPrice:    item.UnitPrice,
+				MarkupAmount: item.MarkupAmount,
+				FinalPrice:   item.FinalPrice,
+				Subtotal:     item.Subtotal,
+			}
+			exportData = append(exportData, row)
+		}
+
+		return SuccessResponse(c, map[string]interface{}{
+			"orderNo": order.OrderNo,
+			"columns": []map[string]string{
+				{"key": "materialName", "title": "物料名称"},
+				{"key": "brand", "title": "品牌"},
+				{"key": "spec", "title": "规格"},
+				{"key": "unit", "title": "单位"},
+				{"key": "quantity", "title": "数量"},
+				{"key": "unitPrice", "title": "原价"},
+				{"key": "markupAmount", "title": "加价"},
+				{"key": "finalPrice", "title": "最终单价"},
+				{"key": "subtotal", "title": "小计"},
+			},
+			"data":  exportData,
+			"total": len(exportData),
 		})
 	}
 }

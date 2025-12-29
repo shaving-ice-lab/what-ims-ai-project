@@ -77,6 +77,8 @@ func RegisterRoutes(e *echo.Echo, db *gorm.DB, redis *redis.Client, logger *zap.
 		admin.GET("/orders", handlers.GetOrdersAdmin(db))
 		admin.GET("/orders/:id", handlers.GetOrderDetailAdmin(db))
 		admin.PUT("/orders/:id/status", handlers.UpdateOrderStatusAdmin(db))
+		admin.GET("/orders/export", handlers.ExportOrdersExcel(db))
+		admin.GET("/orders/:id/export-items", handlers.ExportOrderItemsExcel(db))
 		
 		// 系统配置
 		admin.GET("/configs", handlers.GetSystemConfigs(db))
@@ -92,6 +94,7 @@ func RegisterRoutes(e *echo.Echo, db *gorm.DB, redis *redis.Client, logger *zap.
 		supplier.PUT("/orders/:id/confirm", handlers.ConfirmOrder(db))
 		supplier.PUT("/orders/:id/deliver", handlers.DeliverOrder(db))
 		supplier.PUT("/orders/:id/complete", handlers.CompleteOrder(db))
+		supplier.GET("/orders/export", handlers.ExportOrdersExcel(db))
 		
 		// 物料价格管理
 		supplier.GET("/materials", handlers.GetSupplierMaterials(db))
@@ -99,6 +102,11 @@ func RegisterRoutes(e *echo.Echo, db *gorm.DB, redis *redis.Client, logger *zap.
 		supplier.PUT("/materials/:id", handlers.UpdateSupplierMaterial(db))
 		supplier.DELETE("/materials/:id", handlers.DeleteSupplierMaterial(db))
 		supplier.POST("/materials/import", handlers.ImportSupplierMaterials(db))
+		supplier.GET("/materials/import-template", handlers.GetImportTemplate(db))
+		supplier.GET("/materials/import-history", handlers.GetImportHistory(db))
+		supplier.POST("/materials/batch-price", handlers.BatchUpdatePrice(db))
+		supplier.POST("/materials/batch-stock", handlers.BatchUpdateStockStatus(db))
+		supplier.GET("/materials/price-comparison", handlers.GetPriceComparisonStats(db))
 		
 		// 配送设置
 		supplier.GET("/delivery-settings", handlers.GetDeliverySettings(db))
@@ -133,7 +141,10 @@ func RegisterRoutes(e *echo.Echo, db *gorm.DB, redis *redis.Client, logger *zap.
 		store.GET("/orders", handlers.GetOrdersStore(db))
 		store.GET("/orders/:id", handlers.GetOrderDetailStore(db))
 		store.POST("/orders/:id/cancel", handlers.CancelOrder(db))
+		store.POST("/orders/:id/cancel-request", handlers.SubmitCancelRequest(db))
+		store.GET("/orders/:id/cancel-request", handlers.GetCancelRequestStatus(db))
 		store.POST("/orders/:id/reorder", handlers.ReorderItems(db, redis))
+		store.GET("/orders/export", handlers.ExportOrdersExcel(db))
 		
 		// 支付
 		store.POST("/payment/qrcode", handlers.GeneratePaymentQRCode(db))

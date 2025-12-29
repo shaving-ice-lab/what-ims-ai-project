@@ -1,0 +1,172 @@
+.index-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-bar {
+  background: #1890ff;
+  padding: 20px 24px;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+
+  .search-input-wrap {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-radius: 40px;
+    padding: 0 24px;
+    height: 72px;
+
+    .search-icon {
+      font-size: 28px;
+      margin-right: 12px;
+    }
+
+    .search-input {
+      flex: 1;
+      font-size: 28px;
+    }
+  }
+}
+
+.scroll-content {
+  flex: 1;
+}
+
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+
+  .title-text {
+    font-size: 32px;
+    font-weight: bold;
+    color: #333;
+  }
+
+  .more-text {
+    font-size: 24px;
+    color: #999;
+  }
+}
+
+.category-section {
+  background: #fff;
+  margin: 24px;
+  border-radius: 16px;
+
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 0 16px 24px;
+
+    .category-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+
+      .category-icon {
+        width: 80px;
+        height: 80px;
+        background: #f0f7ff;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+
+        text {
+          font-size: 40px;
+        }
+      }
+
+      .category-name {
+        font-size: 24px;
+        color: #333;
+      }
+    }
+  }
+}
+
+.hot-section {
+  background: #fff;
+  margin: 0 24px 24px;
+  border-radius: 16px;
+  padding-bottom: 24px;
+
+  .material-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    padding: 0 24px;
+
+    .material-card {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+      .material-image {
+        width: 100%;
+        height: 200px;
+        background: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .placeholder-icon {
+          font-size: 60px;
+          opacity: 0.3;
+        }
+      }
+
+      .material-info {
+        padding: 16px;
+
+        .material-name {
+          font-size: 28px;
+          color: #333;
+          font-weight: 500;
+          display: block;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .material-spec {
+          font-size: 22px;
+          color: #999;
+          margin-top: 8px;
+          display: block;
+        }
+
+        .material-price {
+          margin-top: 12px;
+          display: flex;
+          align-items: baseline;
+
+          .price-label {
+            font-size: 22px;
+            color: #ff4d4f;
+          }
+
+          .price-value {
+            font-size: 32px;
+            color: #ff4d4f;
+            font-weight: bold;
+          }
+
+          .price-suffix {
+            font-size: 22px;
+            color: #999;
+            margin-left: 4px;
+          }
+        }
+      }
+    }
+  }
+}

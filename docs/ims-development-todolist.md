@@ -1,4 +1,4 @@
-# 供应链订货系统 - 开发文档
+﻿# 供应链订货系统 - 开发文档
 
 > 本文档为项目开发的详细TodoList，涵盖所有功能模块的开发任务
 
@@ -555,7 +555,7 @@
     - idx_role_status (role, status) - 按角色查询启用用户
   - [X] 编写GORM Model
   - [X] 编写数据库迁移
-  - [ ] 编写Seed数据（默认管理员）
+  - [X] 编写Seed数据（默认管理员）
 
 - [X] 🔴 **管理员表（Admin）**
   - [ ] id - BIGINT, 主键, 自增
@@ -619,8 +619,8 @@
     - idx_user_id (user_id)
     - idx_area (province, city, district) - 区域查询
     - idx_status (status)
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 ### 2.3 供应商模块
 
@@ -652,8 +652,8 @@
     - idx_user_id (user_id)
     - idx_management_mode (management_mode)
     - idx_status (status)
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 - [X] 🔴 **配送区域表（DeliveryArea）**
   - [ ] id - BIGINT, 主键, 自增
@@ -667,8 +667,8 @@
     - idx_supplier_id (supplier_id)
     - idx_area (province, city, district) - 区域匹配查询
     - uk_supplier_area (supplier_id, province, city, district) - 防重复
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 - [X] 🟠 **供应商配送设置审核表（SupplierSettingAudit）**
   - [X] id - BIGINT, 主键, 自增
@@ -705,9 +705,9 @@
     - idx_parent_id (parent_id)
     - idx_sort (sort_order)
     - idx_path (path) - 子分类查询
-  - [ ] 编写GORM Model（自关联）
-  - [ ] 编写数据库迁移
-  - [ ] 编写Seed数据（默认分类）
+  - [X] 编写GORM Model（自关联）
+  - [X] 编写数据库迁移
+  - [X] 编写Seed数据（默认分类）
 
 - [X] 🔴 **物料表（Material）**
   - [ ] id - BIGINT, 主键, 自增
@@ -726,8 +726,8 @@
     - idx_category_id (category_id)
     - idx_name (name) - 名称搜索
     - FULLTEXT idx_search (name, alias, keywords) - 全文搜索
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 - [X] 🔴 **物料SKU表（MaterialSku）**
   - [ ] id - BIGINT, 主键, 自增
@@ -747,8 +747,8 @@
     - idx_brand (brand) - 品牌筛选
     - idx_barcode (barcode) - 条码查询
     - uk_material_brand_spec (material_id, brand, spec) - 防重复SKU
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 - [X] 🔴 **供应商物料表（SupplierMaterial）**
   - [ ] id - BIGINT, 主键, 自增
@@ -772,8 +772,8 @@
     - idx_price (price) - 价格排序
     - idx_stock_status (stock_status)
     - idx_audit_status (audit_status) - 待审核列表
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 ### 2.5 订单模块
 
@@ -846,8 +846,8 @@
     - idx_created_at (created_at) - 时间排序
     - idx_store_status_created (store_id, status, created_at) - 门店订单复合查询
     - idx_supplier_status_created (supplier_id, status, created_at) - 供应商订单复合查询
-  - [ ] 编写GORM Model（含关联）
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model（含关联）
+  - [X] 编写数据库迁移
 
 - [X] 🔴 **订单明细表（OrderItem）**
   - [ ] id - BIGINT, 主键, 自增
@@ -867,8 +867,8 @@
   - [ ] **索引设计**
     - idx_order_id (order_id) - 订单明细查询
     - idx_material_sku_id (material_sku_id) - 物料销售统计
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
 
 - [X] 🟠 **订单取消申请表（OrderCancelRequest）**
   - [X] id - BIGINT, 主键, 自增
@@ -934,7 +934,7 @@
     - idx_status (status)
     - idx_created_at (created_at) - 对账查询
   - [X] 编写GORM Model
-  - [ ] 编写数据库迁移
+  - [X] 编写数据库迁移
 
 ### 2.7 加价模块
 
@@ -974,9 +974,9 @@
   - [ ] updated_at - DATETIME
   - [ ] **索引设计**
     - uk_config_key (config_key) - 唯一键
-  - [ ] 编写GORM Model
-  - [ ] 编写数据库迁移
-  - [ ] 初始化默认配置
+  - [X] 编写GORM Model
+  - [X] 编写数据库迁移
+  - [X] 初始化默认配置
     - order_cancel_threshold: 1小时（自主取消时间阈值）
     - payment_timeout: 15分钟（支付超时时间）
     - service_fee_rate: 0.003（服务费费率）
@@ -1035,7 +1035,7 @@
     - idx_created_at (created_at) - 时间查询
   - [X] 编写GORM Model
   - [X] 编写数据库迁移
-  - [ ] **日志保留策略**：保留90天，定期清理
+  - [X] **日志保留策略**：保留90天，定期清理
 
 ### 2.9 素材库模块
 
@@ -1117,7 +1117,7 @@
   - [X] 实现Token刷新机制 `POST /api/auth/refresh`
     - 使用refreshToken换取新accessToken
     - refreshToken单次使用，刷新后失效
-  - [ ] 实现登录状态记忆
+  - [X] 实现登录状态记忆
     - “记住我”选项：refreshToken延长至30天
   - [X] 实现登录失败次数限制
     - 连续5次失败后锁定账号15分钟
@@ -1346,8 +1346,8 @@
   - [X] 按物料SKU查询报价列表（含最低价排序）
   - [X] 库存状态更新接口
   - [X] 审核接口（管理员）
-  - [ ] 批量调价接口
-  - [ ] 价格对比统计接口
+  - [X] 批量调价接口
+  - [X] 价格对比统计接口
   - [X] 门店端报价查询接口
   - [X] Model、Service、Handler、Router文件
 
@@ -1484,29 +1484,29 @@
   - [X] 待付款订单：显示支付二维码，重新支付
   - [X] 再来一单：复制订单商品到购物车
   - [X] 取消订单（1小时内自主取消）
-  - [ ] 提交取消申请（超过1小时）
-  - [ ] 取消申请状态跟踪
+  - [X] 提交取消申请（超过1小时）
+  - [X] 取消申请状态跟踪
 
-- [ ] **订单取消流程（详细）**
+- [X] **订单取消流程（详细）**
   > **取消规则**：下单后1小时内可自主取消，超过1小时需提交申请等待管理员审批
-  - [ ] 门店自主取消（≤1小时）
+  - [X] 门店自主取消（≤1小时）
     - 检查下单时间是否在1小时内
     - 直接更新订单状态为"已取消"（cancelled）
     - 自动发起退款（如已支付）
     - 推送Webhook取消通知给供应商
     - 推送取消通知给门店管理群
-  - [ ] 门店申请取消（>1小时）
+  - [X] 门店申请取消（>1小时）
     - 填写取消原因
     - 创建取消申请记录（OrderCancelRequest）
     - 状态设为"待审批"（pending）
     - 通知管理员有新的取消申请
     - 门店端显示申请状态跟踪
-  - [ ] 取消申请审批流程
+  - [X] 取消申请审批流程
     - 管理员查看待审批列表
     - 联系供应商确认是否可取消
     - 审批通过：订单状态改为"已取消"，发起退款
     - 审批拒绝：通知门店原因，订单保持原状态
-  - [ ] 订单恢复流程（供应商拒绝取消时）
+  - [X] 订单恢复流程（供应商拒绝取消时）
     - 管理员点击"恢复订单"按钮
     - 填写恢复原因（如：供应商已备货无法取消）
     - 订单状态改为"待付款"（unpaid）
@@ -1514,9 +1514,9 @@
     - 推送Webhook恢复通知给供应商
     - 门店重新支付后，订单状态变为"待确认"
 
-- [ ] **订单导出**
-  - [ ] 导出订单明细Excel
-  - [ ] 导出筛选条件配置
+- [X] **订单导出**
+  - [X] 导出订单明细Excel
+  - [X] 导出筛选条件配置
 
 #### 4.1.5 市场行情
 
@@ -1668,15 +1668,15 @@
   - [X] 设置有货/缺货状态
   - [X] 批量设置库存状态
 
-- [ ] **Excel导入**
-  - [ ] 下载导入模板
-  - [ ] 上传Excel文件
-  - [ ] 导入预览
-  - [ ] 数据校验
-  - [ ] 确认导入
-  - [ ] 导入结果展示
-  - [ ] 导入历史记录
-  - [ ] 错误日志查看
+- [X] **Excel导入**
+  - [X] 下载导入模板
+  - [X] 上传Excel文件
+  - [X] 导入预览
+  - [X] 数据校验
+  - [X] 确认导入
+  - [X] 导入结果展示
+  - [X] 导入历史记录
+  - [X] 错误日志查看
 
 #### 5.1.6 配送设置
 
@@ -1885,11 +1885,11 @@
   - [X] 管理模式设置（自主管理/平台代管/Webhook/API对接）
   - [X] Webhook URL配置
   - [X] Webhook开关
-  - [ ] 推送事件选择（新订单/状态变更/取消/恢复）
+  - [X] 推送事件选择（新订单/状态变更/取消/恢复）
   - [X] 测试推送按钮
   - [X] API接口地址配置
   - [X] API密钥生成/重置
-  - [ ] 重试策略配置
+  - [X] 重试策略配置
 
 - [X] **创建供应商**
   - [X] 供应商信息表单
@@ -3316,3 +3316,12 @@
 >   - Webhook推送：添加消息格式示例（新订单通知Markdown模板）
 >   - 系统配置：补充配置项详细说明（config_key和默认值）
 >   - 支付回调：补充利楚扫呗回调参数解析和响应格式
+
+
+
+
+
+
+
+
+
