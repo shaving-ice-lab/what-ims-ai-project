@@ -8,6 +8,11 @@ import (
 	"gorm.io/gorm"
 )
 
+// strPtr is a helper function to create a string pointer
+func strPtr(s string) *string {
+	return &s
+}
+
 // AutoMigrate runs automatic migrations for all models
 func AutoMigrate(db *gorm.DB) error {
 	// Enable foreign key constraints
@@ -172,7 +177,7 @@ func SeedInitialData(db *gorm.DB) error {
 		Username:     "admin",
 		PasswordHash: "$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqbOH1OJyqqqVnKLBa1xLxDBJ.S3.", // Admin@123
 		Role:         models.RoleAdmin,
-		Phone:        "13800000000",
+		Phone:        strPtr("13800000000"),
 		Status:       1,
 	}
 
@@ -223,19 +228,19 @@ func seedCategories(db *gorm.DB) error {
 
 	// Create top-level categories
 	topCategories := []models.Category{
-		{Name: "蔬菜", Icon: "vegetable", SortOrder: 1, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "水果", Icon: "fruit", SortOrder: 2, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "肉类", Icon: "meat", SortOrder: 3, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "海鲜水产", Icon: "seafood", SortOrder: 4, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "粮油米面", Icon: "grain", SortOrder: 5, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "调味品", Icon: "condiment", SortOrder: 6, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "乳制品", Icon: "dairy", SortOrder: 7, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "冷冻食品", Icon: "frozen", SortOrder: 8, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "饮料酒水", Icon: "beverage", SortOrder: 9, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "干货杂粮", Icon: "dried", SortOrder: 10, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "烘焙原料", Icon: "baking", SortOrder: 11, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "餐厨用品", Icon: "kitchen", SortOrder: 12, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
-		{Name: "其他", Icon: "other", SortOrder: 99, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "蔬菜", Icon: strPtr("vegetable"), SortOrder: 1, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "水果", Icon: strPtr("fruit"), SortOrder: 2, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "肉类", Icon: strPtr("meat"), SortOrder: 3, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "海鲜水产", Icon: strPtr("seafood"), SortOrder: 4, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "粮油米面", Icon: strPtr("grain"), SortOrder: 5, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "调味品", Icon: strPtr("condiment"), SortOrder: 6, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "乳制品", Icon: strPtr("dairy"), SortOrder: 7, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "冷冻食品", Icon: strPtr("frozen"), SortOrder: 8, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "饮料酒水", Icon: strPtr("beverage"), SortOrder: 9, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "干货杂粮", Icon: strPtr("dried"), SortOrder: 10, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "烘焙原料", Icon: strPtr("baking"), SortOrder: 11, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "餐厨用品", Icon: strPtr("kitchen"), SortOrder: 12, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
+		{Name: "其他", Icon: strPtr("other"), SortOrder: 99, Level: 1, Path: "", MarkupEnabled: 1, Status: 1},
 	}
 
 	for i := range topCategories {

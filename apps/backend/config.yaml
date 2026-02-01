@@ -1,13 +1,13 @@
 server:
-  address: ":8080"
-  port: 8080
+  address: ":16000"
+  port: 16000
 
 database:
   host: localhost
   port: 3306
   user: root
-  password: root123456
-  dbname: ims_supply_chain
+  password: 12345678
+  dbname: what-ims-db
   charset: utf8mb4
   max_idle: 5
   max_open: 20
@@ -26,3 +26,21 @@ jwt:
 log:
   level: info
   output_path: logs/app.log
+
+# WeChat Pay Configuration (微信支付配置)
+wechat_pay:
+  app_id: "wx1234567890"           # 微信应用AppID
+  mch_id: "1234567890"             # 商户号
+  mch_api_v3_key: "your-api-v3-key" # APIv3密钥
+  mch_serial_number: "your-serial-number" # 商户证书序列号
+  private_key_path: "certs/apiclient_key.pem" # 商户私钥文件路径
+  notify_url: "https://your-domain.com/api/payments/callback/wechat" # 支付回调地址
+
+# Alipay Configuration (支付宝配置)
+alipay:
+  app_id: "2021000000000000"       # 支付宝应用AppID
+  private_key: ""                  # RSA2私钥 (PKCS1格式)
+  alipay_public_key: ""            # 支付宝公钥 (用于验签)
+  is_production: false             # 是否生产环境
+  notify_url: "https://your-domain.com/api/payments/callback/alipay" # 异步通知地址
+  return_url: "https://your-domain.com/payment/result" # 同步返回地址

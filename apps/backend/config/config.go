@@ -7,11 +7,13 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Log      LogConfig      `mapstructure:"log"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	JWT       JWTConfig       `mapstructure:"jwt"`
+	Log       LogConfig       `mapstructure:"log"`
+	WeChatPay WeChatPayConfig `mapstructure:"wechat_pay"`
+	Alipay    AlipayConfig    `mapstructure:"alipay"`
 }
 
 type ServerConfig struct {
@@ -46,6 +48,26 @@ type JWTConfig struct {
 type LogConfig struct {
 	Level      string `mapstructure:"level"`
 	OutputPath string `mapstructure:"output_path"`
+}
+
+// WeChatPayConfig 微信支付配置
+type WeChatPayConfig struct {
+	AppID           string `mapstructure:"app_id"`
+	MchID           string `mapstructure:"mch_id"`
+	MchAPIV3Key     string `mapstructure:"mch_api_v3_key"`
+	MchSerialNumber string `mapstructure:"mch_serial_number"`
+	PrivateKeyPath  string `mapstructure:"private_key_path"`
+	NotifyURL       string `mapstructure:"notify_url"`
+}
+
+// AlipayConfig 支付宝配置
+type AlipayConfig struct {
+	AppID           string `mapstructure:"app_id"`
+	PrivateKey      string `mapstructure:"private_key"`
+	AlipayPublicKey string `mapstructure:"alipay_public_key"`
+	IsProduction    bool   `mapstructure:"is_production"`
+	NotifyURL       string `mapstructure:"notify_url"`
+	ReturnURL       string `mapstructure:"return_url"`
 }
 
 func Load() *Config {

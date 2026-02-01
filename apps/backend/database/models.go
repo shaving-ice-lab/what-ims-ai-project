@@ -1,10 +1,11 @@
 package database
 
 import (
-	"time"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"time"
+
 	"gorm.io/gorm"
 )
 
@@ -19,17 +20,17 @@ type BaseModel struct {
 // User 用户表
 type User struct {
 	BaseModel
-	Username       string    `gorm:"type:varchar(50);uniqueIndex;not null" json:"username"`
-	PasswordHash   string    `gorm:"type:varchar(255);not null" json:"-"`
-	Role           string    `gorm:"type:enum('admin','sub_admin','supplier','store');not null" json:"role"`
-	Phone          string    `gorm:"type:varchar(20);uniqueIndex" json:"phone"`
-	Email          string    `gorm:"type:varchar(100)" json:"email"`
-	Avatar         string    `gorm:"type:varchar(500)" json:"avatar"`
+	Username       string     `gorm:"type:varchar(50);uniqueIndex;not null" json:"username"`
+	PasswordHash   string     `gorm:"type:varchar(255);not null" json:"-"`
+	Role           string     `gorm:"type:enum('admin','sub_admin','supplier','store');not null" json:"role"`
+	Phone          string     `gorm:"type:varchar(20);uniqueIndex" json:"phone"`
+	Email          string     `gorm:"type:varchar(100)" json:"email"`
+	Avatar         string     `gorm:"type:varchar(500)" json:"avatar"`
 	LastLoginAt    *time.Time `json:"last_login_at"`
-	LastLoginIP    string    `gorm:"type:varchar(50)" json:"last_login_ip"`
-	LoginFailCount int       `gorm:"default:0" json:"login_fail_count"`
+	LastLoginIP    string     `gorm:"type:varchar(50)" json:"last_login_ip"`
+	LoginFailCount int        `gorm:"default:0" json:"login_fail_count"`
 	LockedUntil    *time.Time `json:"locked_until"`
-	Status         bool      `gorm:"default:true" json:"status"`
+	Status         bool       `gorm:"default:true" json:"status"`
 }
 
 // Admin 管理员表
@@ -48,49 +49,49 @@ type Admin struct {
 // Store 门店表
 type Store struct {
 	BaseModel
-	UserID         uint   `gorm:"uniqueIndex;not null" json:"user_id"`
-	User           *User  `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	StoreNo        string `gorm:"type:varchar(20);uniqueIndex" json:"store_no"`
-	Name           string `gorm:"type:varchar(100);not null" json:"name"`
-	Logo           string `gorm:"type:varchar(500)" json:"logo"`
-	Province       string `gorm:"type:varchar(50)" json:"province"`
-	City           string `gorm:"type:varchar(50)" json:"city"`
-	District       string `gorm:"type:varchar(50)" json:"district"`
-	Address        string `gorm:"type:varchar(200)" json:"address"`
+	UserID         uint    `gorm:"uniqueIndex;not null" json:"user_id"`
+	User           *User   `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	StoreNo        string  `gorm:"type:varchar(20);uniqueIndex" json:"store_no"`
+	Name           string  `gorm:"type:varchar(100);not null" json:"name"`
+	Logo           string  `gorm:"type:varchar(500)" json:"logo"`
+	Province       string  `gorm:"type:varchar(50)" json:"province"`
+	City           string  `gorm:"type:varchar(50)" json:"city"`
+	District       string  `gorm:"type:varchar(50)" json:"district"`
+	Address        string  `gorm:"type:varchar(200)" json:"address"`
 	Latitude       float64 `gorm:"type:decimal(10,7)" json:"latitude"`
 	Longitude      float64 `gorm:"type:decimal(10,7)" json:"longitude"`
-	ContactName    string `gorm:"type:varchar(50);not null" json:"contact_name"`
-	ContactPhone   string `gorm:"type:varchar(20);not null" json:"contact_phone"`
-	MarkupEnabled  bool   `gorm:"default:true" json:"markup_enabled"`
-	WebhookURL     string `gorm:"type:varchar(500);column:wechat_webhook_url" json:"webhook_url"`
-	WebhookEnabled bool   `gorm:"default:false" json:"webhook_enabled"`
-	Status         bool   `gorm:"default:true" json:"status"`
+	ContactName    string  `gorm:"type:varchar(50);not null" json:"contact_name"`
+	ContactPhone   string  `gorm:"type:varchar(20);not null" json:"contact_phone"`
+	MarkupEnabled  bool    `gorm:"default:true" json:"markup_enabled"`
+	WebhookURL     string  `gorm:"type:varchar(500);column:wechat_webhook_url" json:"webhook_url"`
+	WebhookEnabled bool    `gorm:"default:false" json:"webhook_enabled"`
+	Status         bool    `gorm:"default:true" json:"status"`
 }
 
 // Supplier 供应商表
 type Supplier struct {
 	BaseModel
-	UserID          uint     `gorm:"not null" json:"user_id"`
-	User            *User    `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	SupplierNo      string   `gorm:"type:varchar(20);uniqueIndex" json:"supplier_no"`
-	Name            string   `gorm:"type:varchar(100);not null" json:"name"`
-	DisplayName     string   `gorm:"type:varchar(100)" json:"display_name"`
-	Logo            string   `gorm:"type:varchar(500)" json:"logo"`
-	ContactName     string   `gorm:"type:varchar(50);not null" json:"contact_name"`
-	ContactPhone    string   `gorm:"type:varchar(20);not null" json:"contact_phone"`
-	MinOrderAmount  float64  `gorm:"type:decimal(10,2);default:0" json:"min_order_amount"`
-	DeliveryDays    []int    `gorm:"type:json" json:"delivery_days"`
-	DeliveryMode    string   `gorm:"type:enum('self_delivery','express_delivery')" json:"delivery_mode"`
-	ManagementMode  string   `gorm:"type:enum('self','managed','webhook','api')" json:"management_mode"`
-	HasBackend      bool     `gorm:"default:true" json:"has_backend"`
-	WebhookURL      string   `gorm:"type:varchar(500);column:wechat_webhook_url" json:"webhook_url"`
-	WebhookEnabled  bool     `gorm:"default:false" json:"webhook_enabled"`
-	WebhookEvents   []string `gorm:"type:json" json:"webhook_events"`
-	APIEndpoint     string   `gorm:"type:varchar(500)" json:"api_endpoint"`
-	APISecretKey    string   `gorm:"type:varchar(100)" json:"-"`
-	MarkupEnabled   bool     `gorm:"default:true" json:"markup_enabled"`
-	Remark          string   `gorm:"type:text" json:"remark"`
-	Status          bool     `gorm:"default:true" json:"status"`
+	UserID         uint     `gorm:"not null" json:"user_id"`
+	User           *User    `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	SupplierNo     string   `gorm:"type:varchar(20);uniqueIndex" json:"supplier_no"`
+	Name           string   `gorm:"type:varchar(100);not null" json:"name"`
+	DisplayName    string   `gorm:"type:varchar(100)" json:"display_name"`
+	Logo           string   `gorm:"type:varchar(500)" json:"logo"`
+	ContactName    string   `gorm:"type:varchar(50);not null" json:"contact_name"`
+	ContactPhone   string   `gorm:"type:varchar(20);not null" json:"contact_phone"`
+	MinOrderAmount float64  `gorm:"type:decimal(10,2);default:0" json:"min_order_amount"`
+	DeliveryDays   []int    `gorm:"type:json" json:"delivery_days"`
+	DeliveryMode   string   `gorm:"type:enum('self_delivery','express_delivery')" json:"delivery_mode"`
+	ManagementMode string   `gorm:"type:enum('self','managed','webhook','api')" json:"management_mode"`
+	HasBackend     bool     `gorm:"default:true" json:"has_backend"`
+	WebhookURL     string   `gorm:"type:varchar(500);column:wechat_webhook_url" json:"webhook_url"`
+	WebhookEnabled bool     `gorm:"default:false" json:"webhook_enabled"`
+	WebhookEvents  []string `gorm:"type:json" json:"webhook_events"`
+	APIEndpoint    string   `gorm:"type:varchar(500)" json:"api_endpoint"`
+	APISecretKey   string   `gorm:"type:varchar(100)" json:"-"`
+	MarkupEnabled  bool     `gorm:"default:true" json:"markup_enabled"`
+	Remark         string   `gorm:"type:text" json:"remark"`
+	Status         bool     `gorm:"default:true" json:"status"`
 }
 
 // DeliveryArea 配送区域表
@@ -122,16 +123,16 @@ type Category struct {
 // Material 物料表
 type Material struct {
 	BaseModel
-	MaterialNo string    `gorm:"type:varchar(20);uniqueIndex" json:"material_no"`
-	CategoryID uint      `gorm:"not null;index" json:"category_id"`
-	Category   *Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
-	Name       string    `gorm:"type:varchar(100);not null;index" json:"name"`
-	Alias      string    `gorm:"type:varchar(100)" json:"alias"`
-	Description string   `gorm:"type:text" json:"description"`
-	ImageURL   string    `gorm:"type:varchar(500)" json:"image_url"`
-	Keywords   string    `gorm:"type:varchar(200)" json:"keywords"`
-	SortOrder  int       `gorm:"default:0" json:"sort_order"`
-	Status     bool      `gorm:"default:true" json:"status"`
+	MaterialNo  string    `gorm:"type:varchar(20);uniqueIndex" json:"material_no"`
+	CategoryID  uint      `gorm:"not null;index" json:"category_id"`
+	Category    *Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
+	Name        string    `gorm:"type:varchar(100);not null;index" json:"name"`
+	Alias       string    `gorm:"type:varchar(100)" json:"alias"`
+	Description string    `gorm:"type:text" json:"description"`
+	ImageURL    string    `gorm:"type:varchar(500)" json:"image_url"`
+	Keywords    string    `gorm:"type:varchar(200)" json:"keywords"`
+	SortOrder   int       `gorm:"default:0" json:"sort_order"`
+	Status      bool      `gorm:"default:true" json:"status"`
 }
 
 // MaterialSku 物料SKU表
@@ -171,42 +172,42 @@ type SupplierMaterial struct {
 // Order 订单表
 type Order struct {
 	BaseModel
-	OrderNo              string       `gorm:"type:varchar(30);uniqueIndex;not null" json:"order_no"`
-	StoreID              uint         `gorm:"not null;index" json:"store_id"`
-	Store                *Store       `gorm:"foreignKey:StoreID" json:"store,omitempty"`
-	SupplierID           uint         `gorm:"not null;index" json:"supplier_id"`
-	Supplier             *Supplier    `gorm:"foreignKey:SupplierID" json:"supplier,omitempty"`
-	GoodsAmount          float64      `gorm:"type:decimal(10,2);not null" json:"goods_amount"`
-	ServiceFee           float64      `gorm:"type:decimal(10,2);default:0" json:"service_fee"`
-	TotalAmount          float64      `gorm:"type:decimal(10,2);not null" json:"total_amount"`
-	SupplierAmount       float64      `gorm:"type:decimal(10,2)" json:"supplier_amount"`
-	MarkupTotal          float64      `gorm:"type:decimal(10,2);default:0" json:"markup_total"`
-	ItemCount            int          `json:"item_count"`
-	Status               string       `gorm:"type:enum('pending_payment','pending_confirm','confirmed','delivering','completed','cancelled');index" json:"status"`
-	PaymentStatus        string       `gorm:"type:enum('unpaid','paid','refunded');default:'unpaid';index" json:"payment_status"`
-	PaymentMethod        string       `gorm:"type:enum('wechat','alipay')" json:"payment_method"`
-	PaymentTime          *time.Time   `json:"payment_time"`
-	PaymentNo            string       `gorm:"type:varchar(50)" json:"payment_no"`
-	OrderSource          string       `gorm:"type:enum('app','web','h5')" json:"order_source"`
-	DeliveryProvince     string       `gorm:"type:varchar(50)" json:"delivery_province"`
-	DeliveryCity         string       `gorm:"type:varchar(50)" json:"delivery_city"`
-	DeliveryDistrict     string       `gorm:"type:varchar(50)" json:"delivery_district"`
-	DeliveryAddress      string       `gorm:"type:varchar(200)" json:"delivery_address"`
-	DeliveryContact      string       `gorm:"type:varchar(50)" json:"delivery_contact"`
-	DeliveryPhone        string       `gorm:"type:varchar(20)" json:"delivery_phone"`
-	ExpectedDeliveryDate *time.Time   `json:"expected_delivery_date"`
-	ActualDeliveryTime   *time.Time   `json:"actual_delivery_time"`
-	Remark               string       `gorm:"type:varchar(500)" json:"remark"`
-	SupplierRemark       string       `gorm:"type:varchar(500)" json:"supplier_remark"`
-	CancelReason         string       `gorm:"type:varchar(200)" json:"cancel_reason"`
-	CancelledBy          string       `gorm:"type:enum('store','supplier','admin','system')" json:"cancelled_by"`
-	CancelledByID        *uint        `json:"cancelled_by_id"`
-	CancelledAt          *time.Time   `json:"cancelled_at"`
-	RestoredAt           *time.Time   `json:"restored_at"`
-	ConfirmedAt          *time.Time   `json:"confirmed_at"`
-	DeliveringAt         *time.Time   `json:"delivering_at"`
-	CompletedAt          *time.Time   `json:"completed_at"`
-	Items                []OrderItem  `gorm:"foreignKey:OrderID" json:"items,omitempty"`
+	OrderNo              string      `gorm:"type:varchar(30);uniqueIndex;not null" json:"order_no"`
+	StoreID              uint        `gorm:"not null;index" json:"store_id"`
+	Store                *Store      `gorm:"foreignKey:StoreID" json:"store,omitempty"`
+	SupplierID           uint        `gorm:"not null;index" json:"supplier_id"`
+	Supplier             *Supplier   `gorm:"foreignKey:SupplierID" json:"supplier,omitempty"`
+	GoodsAmount          float64     `gorm:"type:decimal(10,2);not null" json:"goods_amount"`
+	ServiceFee           float64     `gorm:"type:decimal(10,2);default:0" json:"service_fee"`
+	TotalAmount          float64     `gorm:"type:decimal(10,2);not null" json:"total_amount"`
+	SupplierAmount       float64     `gorm:"type:decimal(10,2)" json:"supplier_amount"`
+	MarkupTotal          float64     `gorm:"type:decimal(10,2);default:0" json:"markup_total"`
+	ItemCount            int         `json:"item_count"`
+	Status               string      `gorm:"type:enum('pending_payment','pending_confirm','confirmed','delivering','completed','cancelled');index" json:"status"`
+	PaymentStatus        string      `gorm:"type:enum('unpaid','paid','refunded');default:'unpaid';index" json:"payment_status"`
+	PaymentMethod        string      `gorm:"type:enum('wechat','alipay')" json:"payment_method"`
+	PaymentTime          *time.Time  `json:"payment_time"`
+	PaymentNo            string      `gorm:"type:varchar(50)" json:"payment_no"`
+	OrderSource          string      `gorm:"type:enum('app','web','h5')" json:"order_source"`
+	DeliveryProvince     string      `gorm:"type:varchar(50)" json:"delivery_province"`
+	DeliveryCity         string      `gorm:"type:varchar(50)" json:"delivery_city"`
+	DeliveryDistrict     string      `gorm:"type:varchar(50)" json:"delivery_district"`
+	DeliveryAddress      string      `gorm:"type:varchar(200)" json:"delivery_address"`
+	DeliveryContact      string      `gorm:"type:varchar(50)" json:"delivery_contact"`
+	DeliveryPhone        string      `gorm:"type:varchar(20)" json:"delivery_phone"`
+	ExpectedDeliveryDate *time.Time  `json:"expected_delivery_date"`
+	ActualDeliveryTime   *time.Time  `json:"actual_delivery_time"`
+	Remark               string      `gorm:"type:varchar(500)" json:"remark"`
+	SupplierRemark       string      `gorm:"type:varchar(500)" json:"supplier_remark"`
+	CancelReason         string      `gorm:"type:varchar(200)" json:"cancel_reason"`
+	CancelledBy          string      `gorm:"type:enum('store','supplier','admin','system')" json:"cancelled_by"`
+	CancelledByID        *uint       `json:"cancelled_by_id"`
+	CancelledAt          *time.Time  `json:"cancelled_at"`
+	RestoredAt           *time.Time  `json:"restored_at"`
+	ConfirmedAt          *time.Time  `json:"confirmed_at"`
+	DeliveringAt         *time.Time  `json:"delivering_at"`
+	CompletedAt          *time.Time  `json:"completed_at"`
+	Items                []OrderItem `gorm:"foreignKey:OrderID" json:"items,omitempty"`
 }
 
 // OrderItem 订单明细表
@@ -267,25 +268,25 @@ type PaymentRecord struct {
 // PriceMarkup 加价规则表
 type PriceMarkup struct {
 	BaseModel
-	Name         string     `gorm:"type:varchar(100);not null" json:"name"`
-	Description  string     `gorm:"type:varchar(500)" json:"description"`
-	StoreID      *uint      `gorm:"index" json:"store_id"`
-	Store        *Store     `gorm:"foreignKey:StoreID" json:"store,omitempty"`
-	SupplierID   *uint      `gorm:"index" json:"supplier_id"`
-	Supplier     *Supplier  `gorm:"foreignKey:SupplierID" json:"supplier,omitempty"`
-	CategoryID   *uint      `json:"category_id"`
-	Category     *Category  `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
-	MaterialID   *uint      `json:"material_id"`
-	Material     *Material  `gorm:"foreignKey:MaterialID" json:"material,omitempty"`
-	MarkupType   string     `gorm:"type:enum('fixed','percent');not null" json:"markup_type"`
-	MarkupValue  float64    `gorm:"type:decimal(10,4);not null" json:"markup_value"`
-	MinMarkup    float64    `gorm:"type:decimal(10,2)" json:"min_markup"`
-	MaxMarkup    float64    `gorm:"type:decimal(10,2)" json:"max_markup"`
-	Priority     int        `gorm:"default:0;index" json:"priority"`
-	IsActive     bool       `gorm:"default:true;index" json:"is_active"`
-	StartTime    *time.Time `json:"start_time"`
-	EndTime      *time.Time `json:"end_time"`
-	CreatedBy    uint       `json:"created_by"`
+	Name        string     `gorm:"type:varchar(100);not null" json:"name"`
+	Description string     `gorm:"type:varchar(500)" json:"description"`
+	StoreID     *uint      `gorm:"index" json:"store_id"`
+	Store       *Store     `gorm:"foreignKey:StoreID" json:"store,omitempty"`
+	SupplierID  *uint      `gorm:"index" json:"supplier_id"`
+	Supplier    *Supplier  `gorm:"foreignKey:SupplierID" json:"supplier,omitempty"`
+	CategoryID  *uint      `json:"category_id"`
+	Category    *Category  `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
+	MaterialID  *uint      `json:"material_id"`
+	Material    *Material  `gorm:"foreignKey:MaterialID" json:"material,omitempty"`
+	MarkupType  string     `gorm:"type:enum('fixed','percent');not null" json:"markup_type"`
+	MarkupValue float64    `gorm:"type:decimal(10,4);not null" json:"markup_value"`
+	MinMarkup   float64    `gorm:"type:decimal(10,2)" json:"min_markup"`
+	MaxMarkup   float64    `gorm:"type:decimal(10,2)" json:"max_markup"`
+	Priority    int        `gorm:"default:0;index" json:"priority"`
+	IsActive    bool       `gorm:"default:true;index" json:"is_active"`
+	StartTime   *time.Time `json:"start_time"`
+	EndTime     *time.Time `json:"end_time"`
+	CreatedBy   uint       `json:"created_by"`
 }
 
 // SystemConfig 系统配置表
@@ -337,6 +338,87 @@ type OperationLog struct {
 	UserAgent     string `gorm:"type:varchar(500)" json:"user_agent"`
 	RequestURL    string `gorm:"type:varchar(500)" json:"request_url"`
 	RequestMethod string `gorm:"type:varchar(10)" json:"request_method"`
+}
+
+// OrderCancelRequest 订单取消申请表
+type OrderCancelRequest struct {
+	BaseModel
+	OrderID           uint       `gorm:"not null;index" json:"order_id"`
+	Order             *Order     `gorm:"foreignKey:OrderID" json:"order,omitempty"`
+	StoreID           uint       `gorm:"not null" json:"store_id"`
+	Store             *Store     `gorm:"foreignKey:StoreID" json:"store,omitempty"`
+	Reason            string     `gorm:"type:varchar(500);not null" json:"reason"`
+	Status            string     `gorm:"type:enum('pending','approved','rejected');default:'pending';index" json:"status"`
+	AdminID           *uint      `json:"admin_id"`
+	Admin             *Admin     `gorm:"foreignKey:AdminID" json:"admin,omitempty"`
+	AdminRemark       *string    `gorm:"type:varchar(500)" json:"admin_remark"`
+	SupplierContacted bool       `gorm:"default:false" json:"supplier_contacted"`
+	SupplierResponse  *string    `gorm:"type:varchar(500)" json:"supplier_response"`
+	ProcessedAt       *time.Time `json:"processed_at"`
+}
+
+// LoginLog 登录日志表
+type LoginLog struct {
+	BaseModel
+	UserID     *uint     `gorm:"index" json:"user_id"`
+	User       *User     `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Username   string    `gorm:"type:varchar(50);not null;index" json:"username"`
+	Status     string    `gorm:"type:enum('success','failed','locked');not null" json:"status"`
+	IPAddress  string    `gorm:"type:varchar(50);not null" json:"ip_address"`
+	UserAgent  *string   `gorm:"type:varchar(500)" json:"user_agent"`
+	DeviceType *string   `gorm:"type:varchar(50)" json:"device_type"`
+	Browser    *string   `gorm:"type:varchar(50)" json:"browser"`
+	OS         *string   `gorm:"type:varchar(50)" json:"os"`
+	Location   *string   `gorm:"type:varchar(100)" json:"location"`
+	FailReason *string   `gorm:"type:varchar(200)" json:"fail_reason"`
+	LoginAt    time.Time `gorm:"index" json:"login_at"`
+}
+
+// WechatBinding 微信绑定表
+type WechatBinding struct {
+	BaseModel
+	OpenID       string     `gorm:"type:varchar(100);uniqueIndex;not null" json:"openid"`
+	UnionID      *string    `gorm:"type:varchar(100)" json:"unionid"`
+	UserID       *uint      `gorm:"index" json:"user_id"`
+	User         *User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Role         *string    `gorm:"type:enum('admin','sub_admin','supplier','store')" json:"role"`
+	BindableID   *uint      `gorm:"index" json:"bindable_id"`
+	BindableType *string    `gorm:"type:varchar(20)" json:"bindable_type"`
+	Nickname     *string    `gorm:"type:varchar(100)" json:"nickname"`
+	Avatar       *string    `gorm:"type:varchar(500)" json:"avatar"`
+	BindTime     *time.Time `json:"bind_time"`
+	Status       bool       `gorm:"default:true" json:"status"`
+}
+
+// ImageMatchRule 图片匹配规则表
+type ImageMatchRule struct {
+	BaseModel
+	Name                *string `gorm:"type:varchar(100)" json:"name"`
+	RuleType            string  `gorm:"type:enum('name','brand','sku','keyword');not null" json:"rule_type"`
+	MatchPattern        *string `gorm:"type:varchar(200)" json:"match_pattern"`
+	SimilarityThreshold float64 `gorm:"type:decimal(3,2);default:0.80" json:"similarity_threshold"`
+	Priority            int     `gorm:"default:0;index" json:"priority"`
+	IsActive            bool    `gorm:"default:true;index" json:"is_active"`
+}
+
+// MediaImage 媒体图片表
+type MediaImage struct {
+	BaseModel
+	CategoryID    *uint     `gorm:"index" json:"category_id"`
+	Category      *Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
+	Brand         *string   `gorm:"type:varchar(50);index" json:"brand"`
+	Name          *string   `gorm:"type:varchar(100)" json:"name"`
+	URL           string    `gorm:"type:varchar(500);not null" json:"url"`
+	ThumbnailURL  *string   `gorm:"type:varchar(500)" json:"thumbnail_url"`
+	FileSize      *int      `json:"file_size"`
+	Width         *int      `json:"width"`
+	Height        *int      `json:"height"`
+	Tags          JSON      `gorm:"type:json" json:"tags"`
+	SkuCodes      JSON      `gorm:"type:json" json:"sku_codes"`
+	MatchKeywords *string   `gorm:"type:varchar(500)" json:"match_keywords"`
+	UsageCount    int       `gorm:"default:0" json:"usage_count"`
+	Status        bool      `gorm:"default:true" json:"status"`
+	UploadedBy    *uint     `json:"uploaded_by"`
 }
 
 // JSON type for GORM JSON fields

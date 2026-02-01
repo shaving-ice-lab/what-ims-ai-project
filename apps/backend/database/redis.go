@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/project/backend/config"
+	"github.com/redis/go-redis/v9"
 )
 
 // Redis 相关常量

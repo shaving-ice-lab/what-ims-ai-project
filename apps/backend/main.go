@@ -1,34 +1,39 @@
 package main
 
 import (
-	"github.com/project/backend/config"
-	"github.com/project/backend/database"
-	"github.com/project/backend/middleware"
-	"github.com/project/backend/routes"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
+	"github.com/project/backend/config"
+	"github.com/project/backend/database"
+	"github.com/project/backend/docs"
+	"github.com/project/backend/middleware"
+	"github.com/project/backend/routes"
+	"github.com/project/backend/utils"
 	"go.uber.org/zap"
 )
 
 func main() {
 	// 初始化配置
 	cfg := config.Load()
-	
+
 	// 初始化日志
 	logger := config.InitLogger(cfg.Log)
 	defer logger.Sync()
-	
+
 	// 初始化数据库
 	db := database.InitDB(cfg.Database)
 	database.RunMigrations(db)
-	
+
 	// 初始化Redis
 	redisClient := database.InitRedis(cfg.Redis)
 	defer redisClient.Close()
-	
+
 	// 创建Echo实例
 	e := echo.New()
-	
+
+	// 配置验证器
+	e.Validator = utils.NewValidator()
+
 	// 配置中间件
 	e.Use(echoMiddleware.Logger())
 	e.Use(echoMiddleware.Recover())
@@ -37,10 +42,13 @@ func main() {
 	e.Use(echoMiddleware.Secure())
 	e.Use(middleware.RateLimiter())
 	e.Use(middleware.ResponseFormatter())
-	
+
 	// 注册路由
-	routes.RegisterRoutes(e, db, redisClient, logger)
-	
+	routes.RegisterRoutes(e, db, redisClient, logger, cfg)
+
+	// 配置Swagger文档
+	docs.SetupSwagger(e)
+
 	// 启动服务器
 	logger.Info("Starting server", zap.String("address", cfg.Server.Address))
 	if err := e.Start(cfg.Server.Address); err != nil {

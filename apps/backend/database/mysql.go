@@ -65,6 +65,11 @@ func RunMigrations(db *gorm.DB) {
 		&SystemConfig{},
 		&WebhookLog{},
 		&OperationLog{},
+		&OrderCancelRequest{},
+		&LoginLog{},
+		&WechatBinding{},
+		&ImageMatchRule{},
+		&MediaImage{},
 	)
 
 	if err != nil {

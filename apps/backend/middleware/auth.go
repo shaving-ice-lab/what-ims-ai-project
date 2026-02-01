@@ -55,59 +55,9 @@ func AuthMiddleware(secret string) echo.MiddlewareFunc {
 	}
 }
 
-// RequireRole 角色权限中间件
-func RequireRole(roles ...string) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			userRole, ok := c.Get("role").(string)
-			if !ok || userRole == "" {
-				return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-					"code":    401,
-					"message": "未授权访问",
-				})
-			}
+// RequireRole is defined in permission.go
 
-			for _, role := range roles {
-				if userRole == role {
-					return next(c)
-				}
-			}
-
-			return c.JSON(http.StatusForbidden, map[string]interface{}{
-				"code":    403,
-				"message": "无权访问该资源",
-			})
-		}
-	}
-}
-
-// RequirePermission 权限检查中间件
-func RequirePermission(permission string) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			userRole, ok := c.Get("role").(string)
-			if !ok || userRole == "" {
-				return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-					"code":    401,
-					"message": "未授权访问",
-				})
-			}
-
-			// 管理员需要检查具体权限
-			if userRole == "admin" || userRole == "sub_admin" {
-				// TODO: 从数据库查询用户权限并验证
-				// 这里需要注入数据库连接来查询权限
-				return next(c)
-			}
-
-			// 其他角色默认无权限
-			return c.JSON(http.StatusForbidden, map[string]interface{}{
-				"code":    403,
-				"message": "无权访问该资源",
-			})
-		}
-	}
-}
+// RequirePermission is defined in permission.go
 
 // GenerateToken 生成JWT token
 func GenerateToken(userID uint, role string, roleID uint, sessionID string, secret string, expiry time.Duration) (string, error) {
