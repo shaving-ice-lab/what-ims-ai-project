@@ -43,3 +43,9 @@ DEVELOPMENT_PROGRESS.md
 FRONTEND_COMPLETION_SUMMARY.md
 FRONTEND_SUMMARY.md
 SESSION_COMPLETION_SUMMARY*.md
+
+# Sensitive files
+account.md
+
+# Logs
+apps/backend/logs/
