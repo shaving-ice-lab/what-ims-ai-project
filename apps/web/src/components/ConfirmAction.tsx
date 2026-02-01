@@ -6,7 +6,7 @@
  */
 
 import { ExclamationCircleOutlined, LockOutlined } from '@ant-design/icons';
-import { Input, Modal, message } from 'antd';
+import { App, Input, Modal } from 'antd';
 import React, { useState } from 'react';
 
 export interface ConfirmActionProps {
@@ -49,6 +49,7 @@ const ConfirmAction: React.FC<ConfirmActionProps> = ({
 }) => {
   const [password, setPassword] = useState('');
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const { message } = App.useApp();
 
   const handleConfirm = async () => {
     if (type === 'password' && !password.trim()) {

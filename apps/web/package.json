@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 16001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 16001",
     "lint": "eslint"
   },
   "dependencies": {
@@ -29,7 +29,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/redux-persist": "^5.10.0",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",

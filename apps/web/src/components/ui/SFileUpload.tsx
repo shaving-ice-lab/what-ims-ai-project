@@ -7,7 +7,7 @@
  */
 
 import { InboxOutlined, UploadOutlined } from '@ant-design/icons';
-import { Button, Upload, type UploadFile, type UploadProps, message } from 'antd';
+import { App, Button, Upload, type UploadFile, type UploadProps } from 'antd';
 import type { RcFile } from 'antd/es/upload';
 import React from 'react';
 
@@ -46,6 +46,7 @@ const SFileUpload: React.FC<SFileUploadProps> = ({
   draggerHint = '支持单个或批量上传',
   ...rest
 }) => {
+  const { message } = App.useApp();
   const handleChange: UploadProps['onChange'] = ({ fileList: newFileList }) => {
     onChange?.(newFileList);
   };

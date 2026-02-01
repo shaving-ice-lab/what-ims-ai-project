@@ -7,8 +7,9 @@
  */
 
 import { PlusOutlined } from '@ant-design/icons';
-import { Modal, Upload, type UploadFile, type UploadProps, message } from 'antd';
+import { App, Modal, Upload, type UploadFile, type UploadProps } from 'antd';
 import type { RcFile } from 'antd/es/upload';
+import Image from 'next/image';
 import React, { useState } from 'react';
 
 export interface SImageUploadProps extends Omit<UploadProps, 'onChange'> {
@@ -35,6 +36,7 @@ const SImageUpload: React.FC<SImageUploadProps> = ({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
+  const { message } = App.useApp();
 
   const getBase64 = (file: RcFile): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -102,7 +104,17 @@ const SImageUpload: React.FC<SImageUploadProps> = ({
         footer={null}
         onCancel={() => setPreviewOpen(false)}
       >
-        <img alt="preview" style={{ width: '100%' }} src={previewImage} />
+        {previewImage && (
+          <div style={{ position: 'relative', width: '100%', height: '400px' }}>
+            <Image
+              alt="preview"
+              src={previewImage}
+              fill
+              style={{ objectFit: 'contain' }}
+              unoptimized
+            />
+          </div>
+        )}
       </Modal>
     </>
   );

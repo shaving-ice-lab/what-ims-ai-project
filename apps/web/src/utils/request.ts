@@ -1,6 +1,6 @@
 import { store } from '@/store';
 import { logout, updateToken } from '@/store/slices/authSlice';
-import { message } from 'antd';
+import { message } from '@/utils/antdStatic';
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // API响应包装
@@ -13,7 +13,7 @@ export interface ApiResponse<T = any> {
 
 // 创建axios实例
 const request: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:16000/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -47,9 +47,9 @@ request.interceptors.response.use(
       return response;
     }
 
-    // 业务错误处理
-    if (res.code !== 200) {
-      message.error(res.message || '请求失败');
+    // 业务错误处理（后端成功码为 0）
+    if (res.code !== 0 && res.code !== 200) {
+      message?.error(res.message || '请求失败');
 
       // 401: 未授权
       if (res.code === 401) {
@@ -69,7 +69,7 @@ request.interceptors.response.use(
 
     // 网络错误
     if (!response) {
-      message.error('网络连接异常，请检查网络');
+      message?.error('网络连接异常，请检查网络');
       return Promise.reject(error);
     }
 
@@ -105,23 +105,23 @@ request.interceptors.response.use(
         break;
 
       case 403:
-        message.error('没有权限访问');
+        message?.error('没有权限访问');
         break;
 
       case 404:
-        message.error('请求的资源不存在');
+        message?.error('请求的资源不存在');
         break;
 
       case 429:
-        message.error('请求过于频繁，请稍后再试');
+        message?.error('请求过于频繁，请稍后再试');
         break;
 
       case 500:
-        message.error('服务器错误，请稍后再试');
+        message?.error('服务器错误，请稍后再试');
         break;
 
       default:
-        message.error(data?.message || `请求失败: ${status}`);
+        message?.error(data?.message || `请求失败: ${status}`);
     }
 
     return Promise.reject(error);
@@ -131,7 +131,7 @@ request.interceptors.response.use(
 // 刷新Token请求
 async function refreshTokenRequest(refreshToken: string) {
   return axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/auth/refresh`,
+    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:16000/api'}/auth/refresh`,
     { refreshToken }
   );
 }

@@ -21,6 +21,7 @@ import {
   Tree,
   Typography,
 } from 'antd';
+import Image from 'next/image';
 import React, { useCallback, useEffect, useState } from 'react';
 
 const { Text } = Typography;
@@ -274,11 +275,16 @@ const MaterialSelect: React.FC<MaterialSelectProps> = ({
       render: (name: string, record) => (
         <Space>
           {record.imageUrl && (
-            <img
-              src={record.imageUrl}
-              alt={name}
-              style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
-            />
+            <div style={{ position: 'relative', width: 40, height: 40, flexShrink: 0 }}>
+              <Image
+                src={record.imageUrl}
+                alt={name}
+                fill
+                sizes="40px"
+                style={{ objectFit: 'cover', borderRadius: 4 }}
+                unoptimized={record.imageUrl.startsWith('http')}
+              />
+            </div>
           )}
           <div>
             <div>{name}</div>

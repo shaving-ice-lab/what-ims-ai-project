@@ -6,7 +6,7 @@
  */
 
 import { MinusOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
-import { Button, Card, Image, InputNumber, Space, Tag, Typography, message } from 'antd';
+import { App, Button, Card, Image, InputNumber, Space, Tag, Typography } from 'antd';
 import React, { useState } from 'react';
 
 const { Text, Paragraph } = Typography;
@@ -79,6 +79,7 @@ const MaterialCard: React.FC<MaterialCardProps> = ({
 }) => {
   const [quantity, setQuantity] = useState(material.minQuantity || 1);
   const [adding, setAdding] = useState(false);
+  const { message } = App.useApp();
 
   const isOutOfStock = material.stockStatus === 'out_of_stock';
   const hasDiscount = material.originalPrice && material.originalPrice > material.price;
