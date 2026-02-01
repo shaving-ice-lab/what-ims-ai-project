@@ -6,23 +6,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// PaymentStatus 支付状态
-type PaymentStatus string
+// PaymentStatus and PaymentMethod are defined in order.go
 
+// Additional payment-specific status constants
 const (
-	PaymentStatusPending       PaymentStatus = "pending"
-	PaymentStatusSuccess       PaymentStatus = "success"
-	PaymentStatusFailed        PaymentStatus = "failed"
-	PaymentStatusRefunded      PaymentStatus = "refunded"
-	PaymentStatusPartialRefund PaymentStatus = "partial_refund"
-)
-
-// PaymentMethod 支付方式
-type PaymentMethod string
-
-const (
-	PaymentMethodWechat PaymentMethod = "wechat"
-	PaymentMethodAlipay PaymentMethod = "alipay"
+	PaymentRecordStatusPending PaymentStatus = "pending"
+	PaymentRecordStatusSuccess PaymentStatus = "success"
+	PaymentRecordStatusFailed  PaymentStatus = "failed"
 )
 
 // PaymentRecord 支付记录表
