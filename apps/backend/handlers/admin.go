@@ -102,12 +102,13 @@ func CreateAdmin(db *gorm.DB) echo.HandlerFunc {
 			return ErrorResponse(c, http.StatusInternalServerError, "密码加密失败")
 		}
 
+		phone := req.Phone
 		user := &models.User{
 			Username:     req.Username,
 			PasswordHash: string(hashedPassword),
-			Phone:        req.Phone,
-			Role:         req.Role,
-			Status:       true,
+			Phone:        &phone,
+			Role:         models.UserRole(req.Role),
+			Status:       1,
 		}
 
 		if err := tx.Create(user).Error; err != nil {
@@ -119,7 +120,6 @@ func CreateAdmin(db *gorm.DB) echo.HandlerFunc {
 		admin := &models.Admin{
 			UserID:      user.ID,
 			Name:        req.Name,
-			Role:        req.Role,
 			Permissions: models.Permissions(req.Permissions),
 			Status:      1,
 		}
@@ -255,13 +255,13 @@ func DeleteAdmin(db *gorm.DB) echo.HandlerFunc {
 			return ErrorResponse(c, http.StatusInternalServerError, "查询失败")
 		}
 
-		// 防止删除超级管理员
-		if admin.Role == "admin" {
-			var adminCount int64
-			tx.Model(&models.Admin{}).Where("role = ?", "admin").Count(&adminCount)
-			if adminCount <= 1 {
+		// 防止删除主管理员
+		if admin.IsPrimary == 1 {
+			var primaryCount int64
+			tx.Model(&models.Admin{}).Where("is_primary = ?", 1).Count(&primaryCount)
+			if primaryCount <= 1 {
 				tx.Rollback()
-				return ErrorResponse(c, http.StatusBadRequest, "不能删除最后一个超级管理员")
+				return ErrorResponse(c, http.StatusBadRequest, "不能删除最后一个主管理员")
 			}
 		}
 
@@ -316,9 +316,9 @@ func UpdatePermissions(db *gorm.DB) echo.HandlerFunc {
 			return ErrorResponse(c, http.StatusInternalServerError, "查询失败")
 		}
 
-		// 只有子管理员可以更新权限
-		if admin.Role != "sub_admin" {
-			return ErrorResponse(c, http.StatusBadRequest, "超级管理员拥有所有权限")
+		// 只有非主管理员可以更新权限
+		if admin.IsPrimary == 1 {
+			return ErrorResponse(c, http.StatusBadRequest, "主管理员拥有所有权限")
 		}
 
 		if err := db.Model(&admin).Update("permissions", models.Permissions(req.Permissions)).Error; err != nil {
@@ -424,12 +424,13 @@ func CreateSupplier(db *gorm.DB) echo.HandlerFunc {
 			return ErrorResponse(c, http.StatusInternalServerError, "密码加密失败")
 		}
 
+		phone := req.Phone
 		user := &models.User{
 			Username:     req.Username,
 			PasswordHash: string(hashedPassword),
-			Phone:        req.Phone,
-			Role:         "supplier",
-			Status:       true,
+			Phone:        &phone,
+			Role:         models.RoleSupplier,
+			Status:       1,
 		}
 
 		if err := tx.Create(user).Error; err != nil {
@@ -441,14 +442,11 @@ func CreateSupplier(db *gorm.DB) echo.HandlerFunc {
 		supplier := &models.Supplier{
 			UserID:         user.ID,
 			Name:           req.Name,
-			Contact:        req.Contact,
-			Phone:          req.Phone,
-			Email:          &req.Email,
-			Address:        &req.Address,
+			ContactName:    req.Contact,
+			ContactPhone:   req.Phone,
 			MinOrderAmount: req.MinOrderAmount,
-			DeliveryMode:   req.DeliveryMode,
+			DeliveryMode:   models.DeliveryMode(req.DeliveryMode),
 			DeliveryDays:   models.DeliveryDays(req.DeliveryDays),
-			ApiEnabled:     false,
 			Status:         1,
 		}
 
@@ -676,19 +674,19 @@ func CreateStore(db *gorm.DB) echo.HandlerFunc {
 		}
 
 		type CreateStoreRequest struct {
-			Username      string `json:"username" validate:"required"`
-			Password      string `json:"password" validate:"required,min=6"`
-			Code          string `json:"code" validate:"required"`
-			Name          string `json:"name" validate:"required"`
-			Contact       string `json:"contact" validate:"required"`
-			Phone         string `json:"phone" validate:"required"`
-			Email         string `json:"email"`
-			Province      string `json:"province" validate:"required"`
-			City          string `json:"city" validate:"required"`
-			District      string `json:"district"`
-			Address       string `json:"address" validate:"required"`
-			EnableMarkup  bool   `json:"enableMarkup"`
-			MarkupMode    string `json:"markupMode"`
+			Username      string  `json:"username" validate:"required"`
+			Password      string  `json:"password" validate:"required,min=6"`
+			Code          string  `json:"code" validate:"required"`
+			Name          string  `json:"name" validate:"required"`
+			Contact       string  `json:"contact" validate:"required"`
+			Phone         string  `json:"phone" validate:"required"`
+			Email         string  `json:"email"`
+			Province      string  `json:"province" validate:"required"`
+			City          string  `json:"city" validate:"required"`
+			District      string  `json:"district"`
+			Address       string  `json:"address" validate:"required"`
+			EnableMarkup  bool    `json:"enableMarkup"`
+			MarkupMode    string  `json:"markupMode"`
 			MarkupPercent float64 `json:"markupPercent"`
 		}
 
@@ -724,12 +722,17 @@ func CreateStore(db *gorm.DB) echo.HandlerFunc {
 			return ErrorResponse(c, http.StatusInternalServerError, "密码加密失败")
 		}
 
+		storePhone := req.Phone
+		province := req.Province
+		city := req.City
+		district := req.District
+		address := req.Address
 		user := &models.User{
 			Username:     req.Username,
 			PasswordHash: string(hashedPassword),
-			Phone:        req.Phone,
-			Role:         "store",
-			Status:       true,
+			Phone:        &storePhone,
+			Role:         models.RoleStore,
+			Status:       1,
 		}
 
 		if err := tx.Create(user).Error; err != nil {
@@ -740,18 +743,14 @@ func CreateStore(db *gorm.DB) echo.HandlerFunc {
 		// 创建门店
 		store := &models.Store{
 			UserID:        user.ID,
-			Code:          req.Code,
 			Name:          req.Name,
-			Contact:       req.Contact,
-			Phone:         req.Phone,
-			Email:         &req.Email,
-			Province:      req.Province,
-			City:          req.City,
-			District:      &req.District,
-			Address:       req.Address,
-			EnableMarkup:  req.EnableMarkup,
-			MarkupMode:    req.MarkupMode,
-			MarkupPercent: req.MarkupPercent,
+			ContactName:   req.Contact,
+			ContactPhone:  req.Phone,
+			Province:      &province,
+			City:          &city,
+			District:      &district,
+			Address:       &address,
+			MarkupEnabled: 1,
 			Status:        1,
 		}
 
@@ -766,7 +765,7 @@ func CreateStore(db *gorm.DB) echo.HandlerFunc {
 			"id":       store.ID,
 			"userId":   user.ID,
 			"username": user.Username,
-			"code":     store.Code,
+			"storeNo":  store.StoreNo,
 		})
 	}
 }
@@ -1014,8 +1013,25 @@ func UpdateSystemConfig(db *gorm.DB) echo.HandlerFunc {
 			return ErrorResponse(c, http.StatusBadRequest, "无效的配置键")
 		}
 
-		// TODO: 在实际应用中，这里应该保存到数据库的系统配置表中
-		// 这里仅返回成功响应作为示例
+		// 保存到数据库的系统配置表
+		var config models.SystemConfig
+		result := db.Where("config_key = ?", req.Key).First(&config)
+		if result.Error != nil {
+			// 不存在则创建
+			config = models.SystemConfig{
+				ConfigKey:   req.Key,
+				ConfigValue: req.Value,
+				ConfigType:  "string",
+			}
+			if err := db.Create(&config).Error; err != nil {
+				return ErrorResponse(c, http.StatusInternalServerError, "保存配置失败")
+			}
+		} else {
+			// 存在则更新
+			if err := db.Model(&config).Update("config_value", req.Value).Error; err != nil {
+				return ErrorResponse(c, http.StatusInternalServerError, "更新配置失败")
+			}
+		}
 
 		return SuccessResponse(c, map[string]string{
 			"key":   req.Key,

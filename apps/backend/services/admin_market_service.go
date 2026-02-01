@@ -16,30 +16,30 @@ func NewAdminMarketService(db *gorm.DB) *AdminMarketService {
 
 // MarketDashboardStats 市场行情仪表盘统计
 type MarketDashboardStats struct {
-	TotalProducts       int     `json:"totalProducts"`
-	ActiveSuppliers     int     `json:"activeSuppliers"`
-	PriceAnomalyCount   int     `json:"priceAnomalyCount"`
-	ExclusiveProducts   int     `json:"exclusiveProducts"`
-	AverageMarkupRate   float64 `json:"averageMarkupRate"`
-	TodayPriceChanges   int     `json:"todayPriceChanges"`
-	NewProductsToday    int     `json:"newProductsToday"`
+	TotalProducts     int     `json:"totalProducts"`
+	ActiveSuppliers   int     `json:"activeSuppliers"`
+	PriceAnomalyCount int     `json:"priceAnomalyCount"`
+	ExclusiveProducts int     `json:"exclusiveProducts"`
+	AverageMarkupRate float64 `json:"averageMarkupRate"`
+	TodayPriceChanges int     `json:"todayPriceChanges"`
+	NewProductsToday  int     `json:"newProductsToday"`
 }
 
 // PriceComparisonDetail 价格对比详情
 type PriceComparisonDetail struct {
-	MaterialSkuID   uint64                    `json:"materialSkuId"`
-	MaterialName    string                    `json:"materialName"`
-	Brand           string                    `json:"brand"`
-	Spec            string                    `json:"spec"`
-	CategoryName    string                    `json:"categoryName"`
-	SupplierCount   int                       `json:"supplierCount"`
-	MinPrice        float64                   `json:"minPrice"`
-	MaxPrice        float64                   `json:"maxPrice"`
-	PriceDiffRate   float64                   `json:"priceDiffRate"`
-	AvgMarkupRate   float64                   `json:"avgMarkupRate"`
-	IsExclusive     bool                      `json:"isExclusive"`
-	IsPriceAnomaly  bool                      `json:"isPriceAnomaly"`
-	SupplierDetails []SupplierPriceDetail     `json:"supplierDetails,omitempty"`
+	MaterialSkuID   uint64                `json:"materialSkuId"`
+	MaterialName    string                `json:"materialName"`
+	Brand           string                `json:"brand"`
+	Spec            string                `json:"spec"`
+	CategoryName    string                `json:"categoryName"`
+	SupplierCount   int                   `json:"supplierCount"`
+	MinPrice        float64               `json:"minPrice"`
+	MaxPrice        float64               `json:"maxPrice"`
+	PriceDiffRate   float64               `json:"priceDiffRate"`
+	AvgMarkupRate   float64               `json:"avgMarkupRate"`
+	IsExclusive     bool                  `json:"isExclusive"`
+	IsPriceAnomaly  bool                  `json:"isPriceAnomaly"`
+	SupplierDetails []SupplierPriceDetail `json:"supplierDetails,omitempty"`
 }
 
 // SupplierPriceDetail 供应商价格详情
@@ -55,23 +55,23 @@ type SupplierPriceDetail struct {
 
 // PriceAnomaly 价格异常预警
 type PriceAnomaly struct {
-	MaterialSkuID   uint64   `json:"materialSkuId"`
-	MaterialName    string   `json:"materialName"`
-	Brand           string   `json:"brand"`
-	PriceDiffRate   float64  `json:"priceDiffRate"`
-	SupplierCount   int      `json:"supplierCount"`
-	Suggestion      string   `json:"suggestion"`
+	MaterialSkuID uint64  `json:"materialSkuId"`
+	MaterialName  string  `json:"materialName"`
+	Brand         string  `json:"brand"`
+	PriceDiffRate float64 `json:"priceDiffRate"`
+	SupplierCount int     `json:"supplierCount"`
+	Suggestion    string  `json:"suggestion"`
 }
 
 // ExclusiveProduct 独家供应产品
 type ExclusiveProduct struct {
-	MaterialSkuID  uint64  `json:"materialSkuId"`
-	MaterialName   string  `json:"materialName"`
-	Brand          string  `json:"brand"`
-	SupplierID     uint64  `json:"supplierId"`
-	SupplierName   string  `json:"supplierName"`
-	Price          float64 `json:"price"`
-	RiskLevel      string  `json:"riskLevel"`
+	MaterialSkuID uint64  `json:"materialSkuId"`
+	MaterialName  string  `json:"materialName"`
+	Brand         string  `json:"brand"`
+	SupplierID    uint64  `json:"supplierId"`
+	SupplierName  string  `json:"supplierName"`
+	Price         float64 `json:"price"`
+	RiskLevel     string  `json:"riskLevel"`
 }
 
 // MarketQueryParams 市场行情查询参数
@@ -95,9 +95,11 @@ func (s *AdminMarketService) GetMarketDashboardStats() (*MarketDashboardStats, e
 		Scan(&stats.TotalProducts)
 
 	// 活跃供应商数量
+	var activeSuppliers int64
 	s.db.Table("suppliers").
 		Where("status = ?", "enabled").
-		Count((*int64)(&stats.ActiveSuppliers))
+		Count(&activeSuppliers)
+	stats.ActiveSuppliers = int(activeSuppliers)
 
 	// 价格异常数量（价差超过15%）
 	s.db.Raw(`
@@ -194,7 +196,7 @@ func (s *AdminMarketService) GetPriceAnomalies(limit int) ([]PriceAnomaly, error
 	var anomalies []PriceAnomaly
 
 	s.db.Raw(`
-		SELECT 
+		SELECT
 			sm.material_sku_id,
 			ms.name as material_name,
 			ms.brand,
@@ -230,7 +232,7 @@ func (s *AdminMarketService) GetExclusiveProducts(limit int) ([]ExclusiveProduct
 	var products []ExclusiveProduct
 
 	s.db.Raw(`
-		SELECT 
+		SELECT
 			sm.material_sku_id,
 			ms.name as material_name,
 			ms.brand,
@@ -242,10 +244,10 @@ func (s *AdminMarketService) GetExclusiveProducts(limit int) ([]ExclusiveProduct
 		JOIN suppliers s ON s.id = sm.supplier_id
 		WHERE sm.status = 'approved'
 		AND sm.material_sku_id IN (
-			SELECT material_sku_id 
-			FROM supplier_materials 
+			SELECT material_sku_id
+			FROM supplier_materials
 			WHERE status = 'approved'
-			GROUP BY material_sku_id 
+			GROUP BY material_sku_id
 			HAVING COUNT(DISTINCT supplier_id) = 1
 		)
 		LIMIT ?

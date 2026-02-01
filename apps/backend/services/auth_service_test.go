@@ -2,7 +2,62 @@ package services
 
 import (
 	"testing"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
+
+// HashPassword hashes a password using bcrypt
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
+}
+
+// CheckPassword checks if a password matches a hash
+func CheckPassword(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+// TestClaims for JWT token
+type TestClaims struct {
+	UserID   uint   `json:"user_id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	jwt.RegisteredClaims
+}
+
+var testJWTSecret = []byte("test_secret_key")
+
+// GenerateToken generates a JWT token for testing
+func GenerateToken(userID uint, username, role string) (string, error) {
+	claims := TestClaims{
+		UserID:   userID,
+		Username: username,
+		Role:     role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(testJWTSecret)
+}
+
+// ValidateToken validates a JWT token for testing
+func ValidateToken(tokenString string) (*TestClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &TestClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return testJWTSecret, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if claims, ok := token.Claims.(*TestClaims); ok && token.Valid {
+		return claims, nil
+	}
+	return nil, jwt.ErrSignatureInvalid
+}
 
 func TestHashPassword(t *testing.T) {
 	password := "testPassword123"

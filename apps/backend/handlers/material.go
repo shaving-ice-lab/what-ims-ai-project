@@ -121,7 +121,7 @@ func CreateCategory(db *gorm.DB) echo.HandlerFunc {
 
 		category := &models.Category{
 			Name:      req.Name,
-			Level:     req.Level,
+			Level:     int8(req.Level),
 			SortOrder: req.SortOrder,
 			Status:    1,
 		}
@@ -188,8 +188,35 @@ func UpdateCategory(db *gorm.DB) echo.HandlerFunc {
 // DeleteCategory 删除分类
 func DeleteCategory(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现删除分类
-		return SuccessResponse(c, nil)
+		if !IsAdmin(c) {
+			return ErrorResponse(c, http.StatusForbidden, "无权访问")
+		}
+
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的分类ID")
+		}
+
+		// 检查是否有子分类
+		var childCount int64
+		db.Model(&models.Category{}).Where("parent_id = ?", id).Count(&childCount)
+		if childCount > 0 {
+			return ErrorResponse(c, http.StatusBadRequest, "该分类下有子分类，无法删除")
+		}
+
+		// 检查是否有关联物料
+		var materialCount int64
+		db.Model(&models.Material{}).Where("category_id = ?", id).Count(&materialCount)
+		if materialCount > 0 {
+			return ErrorResponse(c, http.StatusBadRequest, "该分类下有物料，无法删除")
+		}
+
+		// 软删除分类
+		if err := db.Delete(&models.Category{}, id).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "删除失败")
+		}
+
+		return SuccessResponse(c, map[string]string{"message": "删除成功"})
 	}
 }
 
@@ -280,7 +307,7 @@ func CreateMaterial(db *gorm.DB) echo.HandlerFunc {
 
 		material := &models.Material{
 			CategoryID:  req.CategoryID,
-			Code:        req.Code,
+			MaterialNo:  req.Code,
 			Name:        req.Name,
 			Description: &req.Description,
 			Status:      1,
@@ -466,7 +493,6 @@ func CreateMaterialSku(db *gorm.DB) echo.HandlerFunc {
 			Unit:       req.Unit,
 			Barcode:    req.Barcode,
 			ImageURL:   req.ImageURL,
-			PackSize:   req.PackSize,
 			Status:     1,
 		}
 
@@ -573,31 +599,161 @@ func DeleteMaterialSku(db *gorm.DB) echo.HandlerFunc {
 // GetPriceMarkups 获取加价规则列表
 func GetPriceMarkups(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现加价规则列表查询
-		return SuccessResponse(c, []interface{}{})
+		page, _ := strconv.Atoi(c.QueryParam("page"))
+		if page <= 0 {
+			page = 1
+		}
+		pageSize, _ := strconv.Atoi(c.QueryParam("pageSize"))
+		if pageSize <= 0 || pageSize > 100 {
+			pageSize = 20
+		}
+
+		var total int64
+		var markups []models.PriceMarkup
+
+		query := db.Model(&models.PriceMarkup{})
+
+		// 筛选条件
+		if storeID := c.QueryParam("storeId"); storeID != "" {
+			query = query.Where("store_id = ?", storeID)
+		}
+		if supplierID := c.QueryParam("supplierId"); supplierID != "" {
+			query = query.Where("supplier_id = ?", supplierID)
+		}
+		if isActive := c.QueryParam("isActive"); isActive != "" {
+			query = query.Where("is_active = ?", isActive == "true")
+		}
+
+		query.Count(&total)
+
+		offset := (page - 1) * pageSize
+		if err := query.Preload("Store").Preload("Supplier").Preload("Category").
+			Order("priority DESC, created_at DESC").
+			Offset(offset).Limit(pageSize).Find(&markups).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "查询失败")
+		}
+
+		return SuccessPageResponse(c, markups, total, page, pageSize)
 	}
 }
 
 // CreatePriceMarkup 创建加价规则
 func CreatePriceMarkup(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现创建加价规则
-		return SuccessResponse(c, nil)
+		type CreateMarkupRequest struct {
+			Name        string            `json:"name" validate:"required"`
+			Description string            `json:"description"`
+			StoreID     *uint64           `json:"storeId"`
+			SupplierID  *uint64           `json:"supplierId"`
+			CategoryID  *uint64           `json:"categoryId"`
+			MaterialID  *uint64           `json:"materialId"`
+			MarkupType  models.MarkupType `json:"markupType" validate:"required"`
+			MarkupValue float64           `json:"markupValue" validate:"required"`
+			MinMarkup   float64           `json:"minMarkup"`
+			MaxMarkup   float64           `json:"maxMarkup"`
+			Priority    int               `json:"priority"`
+			IsActive    bool              `json:"isActive"`
+		}
+
+		var req CreateMarkupRequest
+		if err := c.Bind(&req); err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "请求参数错误")
+		}
+
+		userID := GetUserID(c)
+		markup := &models.PriceMarkup{
+			Name:        req.Name,
+			Description: req.Description,
+			StoreID:     req.StoreID,
+			SupplierID:  req.SupplierID,
+			CategoryID:  req.CategoryID,
+			MaterialID:  req.MaterialID,
+			MarkupType:  req.MarkupType,
+			MarkupValue: req.MarkupValue,
+			MinMarkup:   req.MinMarkup,
+			MaxMarkup:   req.MaxMarkup,
+			Priority:    req.Priority,
+			IsActive:    req.IsActive,
+			CreatedBy:   userID,
+		}
+
+		if err := db.Create(markup).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "创建失败")
+		}
+
+		return SuccessResponse(c, markup)
 	}
 }
 
 // UpdatePriceMarkup 更新加价规则
 func UpdatePriceMarkup(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现更新加价规则
-		return SuccessResponse(c, nil)
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的ID")
+		}
+
+		var markup models.PriceMarkup
+		if err := db.First(&markup, id).Error; err != nil {
+			return ErrorResponse(c, http.StatusNotFound, "加价规则不存在")
+		}
+
+		type UpdateMarkupRequest struct {
+			Name        string            `json:"name"`
+			Description string            `json:"description"`
+			MarkupType  models.MarkupType `json:"markupType"`
+			MarkupValue float64           `json:"markupValue"`
+			MinMarkup   float64           `json:"minMarkup"`
+			MaxMarkup   float64           `json:"maxMarkup"`
+			Priority    int               `json:"priority"`
+			IsActive    *bool             `json:"isActive"`
+		}
+
+		var req UpdateMarkupRequest
+		if err := c.Bind(&req); err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "请求参数错误")
+		}
+
+		updates := make(map[string]interface{})
+		if req.Name != "" {
+			updates["name"] = req.Name
+		}
+		if req.Description != "" {
+			updates["description"] = req.Description
+		}
+		if req.MarkupType != "" {
+			updates["markup_type"] = req.MarkupType
+		}
+		if req.MarkupValue != 0 {
+			updates["markup_value"] = req.MarkupValue
+		}
+		updates["min_markup"] = req.MinMarkup
+		updates["max_markup"] = req.MaxMarkup
+		updates["priority"] = req.Priority
+		if req.IsActive != nil {
+			updates["is_active"] = *req.IsActive
+		}
+
+		if err := db.Model(&markup).Updates(updates).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "更新失败")
+		}
+
+		return SuccessResponse(c, markup)
 	}
 }
 
 // DeletePriceMarkup 删除加价规则
 func DeletePriceMarkup(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现删除加价规则
-		return SuccessResponse(c, nil)
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的ID")
+		}
+
+		if err := db.Delete(&models.PriceMarkup{}, id).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "删除失败")
+		}
+
+		return SuccessResponse(c, map[string]string{"message": "删除成功"})
 	}
 }

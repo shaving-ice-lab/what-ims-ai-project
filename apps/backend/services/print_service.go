@@ -2,7 +2,6 @@ package services
 
 import (
 	"bytes"
-	"fmt"
 	"html/template"
 	"time"
 
@@ -21,20 +20,20 @@ func NewPrintService(db *gorm.DB) *PrintService {
 
 // DeliveryNote 送货单数据
 type DeliveryNote struct {
-	OrderNo         string             `json:"orderNo"`
-	OrderDate       time.Time          `json:"orderDate"`
-	SupplierName    string             `json:"supplierName"`
-	SupplierPhone   string             `json:"supplierPhone"`
-	StoreName       string             `json:"storeName"`
-	StoreAddress    string             `json:"storeAddress"`
-	StorePhone      string             `json:"storePhone"`
-	ContactPerson   string             `json:"contactPerson"`
-	ExpectedDate    *time.Time         `json:"expectedDate"`
-	Items           []DeliveryNoteItem `json:"items"`
-	TotalQuantity   int                `json:"totalQuantity"`
-	TotalAmount     float64            `json:"totalAmount"`
-	Remark          string             `json:"remark"`
-	PrintTime       time.Time          `json:"printTime"`
+	OrderNo       string             `json:"orderNo"`
+	OrderDate     time.Time          `json:"orderDate"`
+	SupplierName  string             `json:"supplierName"`
+	SupplierPhone string             `json:"supplierPhone"`
+	StoreName     string             `json:"storeName"`
+	StoreAddress  string             `json:"storeAddress"`
+	StorePhone    string             `json:"storePhone"`
+	ContactPerson string             `json:"contactPerson"`
+	ExpectedDate  *time.Time         `json:"expectedDate"`
+	Items         []DeliveryNoteItem `json:"items"`
+	TotalQuantity int                `json:"totalQuantity"`
+	TotalAmount   float64            `json:"totalAmount"`
+	Remark        string             `json:"remark"`
+	PrintTime     time.Time          `json:"printTime"`
 }
 
 // DeliveryNoteItem 送货单商品项
@@ -60,14 +59,14 @@ type PrintQueryParams struct {
 func (s *PrintService) GetDeliveryNote(orderID uint64) (*DeliveryNote, error) {
 	// 查询订单信息
 	var order struct {
-		ID            uint64
-		OrderNo       string
-		CreatedAt     time.Time
-		ExpectedDate  *time.Time
-		Remark        string
-		TotalAmount   float64
-		SupplierID    uint64
-		StoreID       uint64
+		ID           uint64
+		OrderNo      string
+		CreatedAt    time.Time
+		ExpectedDate *time.Time
+		Remark       string
+		TotalAmount  float64
+		SupplierID   uint64
+		StoreID      uint64
 	}
 
 	if err := s.db.Table("orders").
@@ -180,7 +179,7 @@ func (s *PrintService) GenerateDeliveryNoteHTML(note *DeliveryNote) (string, err
         <div class="title">送 货 单</div>
         <div>{{.SupplierName}}</div>
     </div>
-    
+
     <div class="info-row">
         <span>订单编号：{{.OrderNo}}</span>
         <span>下单时间：{{.OrderDate.Format "2006-01-02 15:04"}}</span>
@@ -193,7 +192,7 @@ func (s *PrintService) GenerateDeliveryNoteHTML(note *DeliveryNote) (string, err
         <span>收货地址：{{.StoreAddress}}</span>
         <span>联系电话：{{.StorePhone}}</span>
     </div>
-    
+
     <table>
         <thead>
             <tr>
@@ -230,11 +229,11 @@ func (s *PrintService) GenerateDeliveryNoteHTML(note *DeliveryNote) (string, err
             </tr>
         </tfoot>
     </table>
-    
+
     {{if .Remark}}
     <div>备注：{{.Remark}}</div>
     {{end}}
-    
+
     <div class="footer">
         <div class="sign-area">
             <div>送货人签字：<span class="sign-box"></span></div>
@@ -242,7 +241,7 @@ func (s *PrintService) GenerateDeliveryNoteHTML(note *DeliveryNote) (string, err
             <div>日期：<span class="sign-box"></span></div>
         </div>
     </div>
-    
+
     <div style="margin-top: 20px; font-size: 10px; color: #666;">
         打印时间：{{.PrintTime.Format "2006-01-02 15:04:05"}}
     </div>
@@ -308,19 +307,19 @@ func (s *PrintService) GetPrintTemplate() (map[string]interface{}, error) {
 	var config struct {
 		Value string
 	}
-	
+
 	if err := s.db.Table("system_configs").
 		Select("config_value as value").
 		Where("config_key = ?", "delivery_note_template").
 		First(&config).Error; err != nil {
 		// 返回默认配置
 		return map[string]interface{}{
-			"showLogo":       true,
-			"showPrice":      true,
-			"showRemark":     true,
-			"showSignArea":   true,
-			"paperSize":      "A4",
-			"orientation":    "portrait",
+			"showLogo":     true,
+			"showPrice":    true,
+			"showRemark":   true,
+			"showSignArea": true,
+			"paperSize":    "A4",
+			"orientation":  "portrait",
 		}, nil
 	}
 

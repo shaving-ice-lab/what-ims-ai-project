@@ -14,33 +14,26 @@ const (
 	StockStatusOutOfStock StockStatus = "out_of_stock"
 )
 
-// AuditStatus represents audit status types
-type AuditStatus string
-
-const (
-	AuditStatusPending  AuditStatus = "pending"
-	AuditStatusApproved AuditStatus = "approved"
-	AuditStatusRejected AuditStatus = "rejected"
-)
+// AuditStatus is defined in supplier_setting_audit.go
 
 // SupplierMaterial represents the supplier_materials table
 type SupplierMaterial struct {
-	ID             uint64         `gorm:"primaryKey;autoIncrement" json:"id"`
-	SupplierID     uint64         `gorm:"index;not null" json:"supplier_id"`
-	MaterialSkuID  uint64         `gorm:"index;not null" json:"material_sku_id"`
-	Price          float64        `gorm:"type:decimal(10,2);not null" json:"price"`
-	OriginalPrice  *float64       `gorm:"type:decimal(10,2)" json:"original_price,omitempty"`
-	MinQuantity    int            `gorm:"default:1" json:"min_quantity"`
-	StepQuantity   int            `gorm:"default:1" json:"step_quantity"`
-	StockStatus    StockStatus    `gorm:"type:enum('in_stock','out_of_stock');default:'in_stock'" json:"stock_status"`
-	AuditStatus    AuditStatus    `gorm:"type:enum('pending','approved','rejected')" json:"audit_status"`
-	RejectReason   *string        `gorm:"type:varchar(200)" json:"reject_reason,omitempty"`
-	IsRecommended  int8           `gorm:"type:tinyint(1);default:0" json:"is_recommended"`
-	SalesCount     int            `gorm:"default:0" json:"sales_count"`
-	Status         int8           `gorm:"type:tinyint(1);default:1" json:"status"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
-	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
+	ID            uint64         `gorm:"primaryKey;autoIncrement" json:"id"`
+	SupplierID    uint64         `gorm:"index;not null" json:"supplier_id"`
+	MaterialSkuID uint64         `gorm:"index;not null" json:"material_sku_id"`
+	Price         float64        `gorm:"type:decimal(10,2);not null" json:"price"`
+	OriginalPrice *float64       `gorm:"type:decimal(10,2)" json:"original_price,omitempty"`
+	MinQuantity   int            `gorm:"default:1" json:"min_quantity"`
+	StepQuantity  int            `gorm:"default:1" json:"step_quantity"`
+	StockStatus   StockStatus    `gorm:"type:enum('in_stock','out_of_stock');default:'in_stock'" json:"stock_status"`
+	AuditStatus   AuditStatus    `gorm:"type:enum('pending','approved','rejected')" json:"audit_status"`
+	RejectReason  *string        `gorm:"type:varchar(200)" json:"reject_reason,omitempty"`
+	IsRecommended int8           `gorm:"type:tinyint(1);default:0" json:"is_recommended"`
+	SalesCount    int            `gorm:"default:0" json:"sales_count"`
+	Status        int8           `gorm:"type:tinyint(1);default:1" json:"status"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
 	Supplier    *Supplier    `gorm:"foreignKey:SupplierID" json:"supplier,omitempty"`

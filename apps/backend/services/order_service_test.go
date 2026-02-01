@@ -1,6 +1,7 @@
 package services
 
 import (
+	"crypto/rand"
 	"testing"
 	"time"
 )
@@ -170,8 +171,14 @@ func CanTransitionOrderStatus(from, to string) bool {
 func randomString(n int) string {
 	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	result := make([]byte, n)
+	if _, err := rand.Read(result); err != nil {
+		for i := range result {
+			result[i] = letters[time.Now().UnixNano()%int64(len(letters))]
+		}
+		return string(result)
+	}
 	for i := range result {
-		result[i] = letters[time.Now().UnixNano()%int64(len(letters))]
+		result[i] = letters[int(result[i])%len(letters)]
 	}
 	return string(result)
 }

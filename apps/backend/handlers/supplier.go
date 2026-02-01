@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/project/backend/models"
@@ -31,7 +32,7 @@ func GetSupplierMaterials(db *gorm.DB) echo.HandlerFunc {
 
 		query := db.Model(&models.SupplierMaterial{}).Where("supplier_id = ?", supplierID)
 		query.Count(&total)
-		
+
 		offset := (page - 1) * pageSize
 		err := query.Preload("MaterialSku.Material.Category").
 			Offset(offset).Limit(pageSize).
@@ -75,7 +76,7 @@ func CreateSupplierMaterial(db *gorm.DB) echo.HandlerFunc {
 		db.Model(&models.SupplierMaterial{}).
 			Where("supplier_id = ? AND material_sku_id = ?", supplierID, req.MaterialSkuID).
 			Count(&count)
-		
+
 		if count > 0 {
 			return ErrorResponse(c, http.StatusConflict, "该物料已存在")
 		}
@@ -181,11 +182,11 @@ func DeleteSupplierMaterial(db *gorm.DB) echo.HandlerFunc {
 
 		result := db.Where("id = ? AND supplier_id = ?", id, supplierID).
 			Delete(&models.SupplierMaterial{})
-		
+
 		if result.Error != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, "删除失败")
 		}
-		
+
 		if result.RowsAffected == 0 {
 			return ErrorResponse(c, http.StatusNotFound, "物料不存在")
 		}
@@ -429,8 +430,8 @@ func GetDeliverySettings(db *gorm.DB) echo.HandlerFunc {
 
 		return SuccessResponse(c, map[string]interface{}{
 			"minOrderAmount": supplier.MinOrderAmount,
-			"deliveryDays": supplier.DeliveryDays,
-			"deliveryMode": supplier.DeliveryMode,
+			"deliveryDays":   supplier.DeliveryDays,
+			"deliveryMode":   supplier.DeliveryMode,
 		})
 	}
 }
@@ -517,13 +518,13 @@ func CreateDeliveryArea(db *gorm.DB) echo.HandlerFunc {
 		// Check if area already exists
 		query := db.Model(&models.DeliveryArea{}).
 			Where("supplier_id = ? AND province = ? AND city = ?", supplierID, req.Province, req.City)
-		
+
 		if req.District != nil {
 			query = query.Where("district = ?", *req.District)
 		} else {
 			query = query.Where("district IS NULL")
 		}
-		
+
 		var count int64
 		query.Count(&count)
 		if count > 0 {
@@ -561,11 +562,11 @@ func DeleteDeliveryArea(db *gorm.DB) echo.HandlerFunc {
 
 		result := db.Where("id = ? AND supplier_id = ?", id, supplierID).
 			Delete(&models.DeliveryArea{})
-		
+
 		if result.Error != nil {
 			return ErrorResponse(c, http.StatusInternalServerError, "删除失败")
 		}
-		
+
 		if result.RowsAffected == 0 {
 			return ErrorResponse(c, http.StatusNotFound, "配送区域不存在")
 		}
@@ -577,24 +578,102 @@ func DeleteDeliveryArea(db *gorm.DB) echo.HandlerFunc {
 // GetSupplierStats 获取供应商统计
 func GetSupplierStats(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现获取供应商统计
-		return SuccessResponse(c, nil)
+		supplierID := GetSupplierID(c)
+		if supplierID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		now := time.Now()
+		monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+		var totalOrders, monthlyOrders, pendingOrders int64
+		var totalAmount, monthlyAmount float64
+		var materialCount int64
+
+		// 总订单数和金额
+		db.Model(&models.Order{}).Where("supplier_id = ?", supplierID).Count(&totalOrders)
+		db.Model(&models.Order{}).Where("supplier_id = ? AND status != ?", supplierID, models.OrderStatusCancelled).
+			Select("COALESCE(SUM(total_amount), 0)").Scan(&totalAmount)
+
+		// 本月订单数和金额
+		db.Model(&models.Order{}).Where("supplier_id = ? AND created_at >= ?", supplierID, monthStart).Count(&monthlyOrders)
+		db.Model(&models.Order{}).Where("supplier_id = ? AND created_at >= ? AND status != ?", supplierID, monthStart, models.OrderStatusCancelled).
+			Select("COALESCE(SUM(total_amount), 0)").Scan(&monthlyAmount)
+
+		// 待处理订单
+		db.Model(&models.Order{}).Where("supplier_id = ? AND status = ?", supplierID, models.OrderStatusPendingConfirm).Count(&pendingOrders)
+
+		// 物料数量
+		db.Model(&models.SupplierMaterial{}).Where("supplier_id = ? AND status = 1", supplierID).Count(&materialCount)
+
+		return SuccessResponse(c, map[string]interface{}{
+			"totalOrders":   totalOrders,
+			"totalAmount":   totalAmount,
+			"monthlyOrders": monthlyOrders,
+			"monthlyAmount": monthlyAmount,
+			"pendingOrders": pendingOrders,
+			"materialCount": materialCount,
+		})
 	}
 }
 
 // GetSupplierOrderStats 获取供应商订单统计
 func GetSupplierOrderStats(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现获取供应商订单统计
-		return SuccessResponse(c, nil)
+		supplierID := GetSupplierID(c)
+		if supplierID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		// 获取近七天订单统计
+		now := time.Now()
+		sevenDaysAgo := now.AddDate(0, 0, -7)
+
+		type DailyStats struct {
+			Date        string  `json:"date"`
+			OrderCount  int64   `json:"orderCount"`
+			TotalAmount float64 `json:"totalAmount"`
+		}
+
+		var stats []DailyStats
+		db.Table("orders").
+			Select("DATE(created_at) as date, COUNT(*) as order_count, COALESCE(SUM(total_amount), 0) as total_amount").
+			Where("supplier_id = ? AND created_at >= ? AND status != ?", supplierID, sevenDaysAgo, models.OrderStatusCancelled).
+			Group("DATE(created_at)").
+			Order("date DESC").
+			Scan(&stats)
+
+		return SuccessResponse(c, stats)
 	}
 }
 
 // GetSupplierMaterialStats 获取供应商物料统计
 func GetSupplierMaterialStats(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现获取供应商物料统计
-		return SuccessResponse(c, nil)
+		supplierID := GetSupplierID(c)
+		if supplierID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		// 获取物料分类统计
+		type CategoryStats struct {
+			CategoryID    uint64 `json:"categoryId"`
+			CategoryName  string `json:"categoryName"`
+			MaterialCount int64  `json:"materialCount"`
+		}
+
+		var stats []CategoryStats
+		db.Table("supplier_materials sm").
+			Select("c.id as category_id, c.name as category_name, COUNT(*) as material_count").
+			Joins("JOIN material_skus ms ON sm.material_sku_id = ms.id").
+			Joins("JOIN materials m ON ms.material_id = m.id").
+			Joins("JOIN categories c ON m.category_id = c.id").
+			Where("sm.supplier_id = ? AND sm.status = 1 AND sm.deleted_at IS NULL", supplierID).
+			Group("c.id, c.name").
+			Order("material_count DESC").
+			Scan(&stats)
+
+		return SuccessResponse(c, stats)
 	}
 }
 
@@ -713,19 +792,19 @@ func GetPriceComparisonStats(db *gorm.DB) echo.HandlerFunc {
 
 		// 获取该供应商的所有物料及其市场价格对比
 		type PriceComparison struct {
-			MaterialSkuID  uint64  `json:"materialSkuId"`
-			MaterialName   string  `json:"materialName"`
-			Brand          string  `json:"brand"`
-			Spec           string  `json:"spec"`
-			MyPrice        float64 `json:"myPrice"`
-			LowestPrice    float64 `json:"lowestPrice"`
-			HighestPrice   float64 `json:"highestPrice"`
-			AvgPrice       float64 `json:"avgPrice"`
-			SupplierCount  int     `json:"supplierCount"`
-			PriceDiff      float64 `json:"priceDiff"`
-			PriceDiffRate  float64 `json:"priceDiffRate"`
-			IsLowest       bool    `json:"isLowest"`
-			IsHighest      bool    `json:"isHighest"`
+			MaterialSkuID uint64  `json:"materialSkuId"`
+			MaterialName  string  `json:"materialName"`
+			Brand         string  `json:"brand"`
+			Spec          string  `json:"spec"`
+			MyPrice       float64 `json:"myPrice"`
+			LowestPrice   float64 `json:"lowestPrice"`
+			HighestPrice  float64 `json:"highestPrice"`
+			AvgPrice      float64 `json:"avgPrice"`
+			SupplierCount int     `json:"supplierCount"`
+			PriceDiff     float64 `json:"priceDiff"`
+			PriceDiffRate float64 `json:"priceDiffRate"`
+			IsLowest      bool    `json:"isLowest"`
+			IsHighest     bool    `json:"isHighest"`
 		}
 
 		var comparisons []PriceComparison

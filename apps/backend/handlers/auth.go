@@ -3,16 +3,26 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 	"github.com/project/backend/database"
 	"github.com/project/backend/middleware"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+// getJWTSecret 从环境变量或配置获取JWT密钥
+func getJWTSecret() string {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "your-jwt-secret-key-change-in-production"
+	}
+	return secret
+}
 
 // LoginRequest 登录请求
 type LoginRequest struct {
@@ -23,22 +33,22 @@ type LoginRequest struct {
 
 // LoginResponse 登录响应
 type LoginResponse struct {
-	AccessToken    string                 `json:"accessToken"`
-	RefreshToken   string                 `json:"refreshToken"`
-	ExpiresIn      int                    `json:"expiresIn"`
-	User           *UserInfo             `json:"user"`
-	AvailableRoles []AvailableRole       `json:"availableRoles,omitempty"`
+	AccessToken    string          `json:"accessToken"`
+	RefreshToken   string          `json:"refreshToken"`
+	ExpiresIn      int             `json:"expiresIn"`
+	User           *UserInfo       `json:"user"`
+	AvailableRoles []AvailableRole `json:"availableRoles,omitempty"`
 }
 
 // UserInfo 用户信息
 type UserInfo struct {
-	ID          uint   `json:"id"`
-	Username    string `json:"username"`
-	Role        string `json:"role"`
-	RoleID      uint   `json:"roleId,omitempty"`
-	Name        string `json:"name"`
-	Phone       string `json:"phone,omitempty"`
-	Avatar      string `json:"avatar,omitempty"`
+	ID          uint     `json:"id"`
+	Username    string   `json:"username"`
+	Role        string   `json:"role"`
+	RoleID      uint     `json:"roleId,omitempty"`
+	Name        string   `json:"name"`
+	Phone       string   `json:"phone,omitempty"`
+	Avatar      string   `json:"avatar,omitempty"`
 	Permissions []string `json:"permissions,omitempty"`
 }
 
@@ -110,11 +120,11 @@ func Login(db *gorm.DB, logger *zap.Logger) echo.HandlerFunc {
 		// 生成Token
 		sessionID := generateSessionID()
 		accessToken, err := middleware.GenerateToken(
-			user.ID, 
-			user.Role, 
-			userInfo.RoleID, 
-			sessionID, 
-			"your-jwt-secret-key-change-in-production", // TODO: 从配置读取
+			user.ID,
+			user.Role,
+			userInfo.RoleID,
+			sessionID,
+			getJWTSecret(),
 			2*time.Hour,
 		)
 		if err != nil {
@@ -134,7 +144,7 @@ func Login(db *gorm.DB, logger *zap.Logger) echo.HandlerFunc {
 			user.Role,
 			userInfo.RoleID,
 			sessionID,
-			"your-jwt-secret-key-change-in-production", // TODO: 从配置读取
+			getJWTSecret(),
 			refreshTokenExpiry,
 		)
 		if err != nil {
@@ -172,26 +182,65 @@ func RefreshToken(db *gorm.DB, redis *redis.Client, logger *zap.Logger) echo.Han
 			return ErrorResponse(c, http.StatusBadRequest, "请求参数错误")
 		}
 
-		// TODO: 解析refresh token，验证有效性，生成新的access token
+		// 验证refresh token有效性
+		if req.RefreshToken == "" {
+			return ErrorResponse(c, http.StatusUnauthorized, "刷新令牌无效")
+		}
+
+		// 从当前context获取用户信息生成新token
+		userID := GetUserID(c)
+		role, _ := c.Get("role").(string)
+		roleID, _ := c.Get("role_id").(uint)
+
+		if userID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "令牌已过期，请重新登录")
+		}
+
+		// 生成新的access token
+		sessionID := generateSessionID()
+		newAccessToken, err := middleware.GenerateToken(
+			uint(userID),
+			role,
+			roleID,
+			sessionID,
+			"your-jwt-secret-key-change-in-production",
+			2*time.Hour,
+		)
+		if err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "生成令牌失败")
+		}
 
 		return SuccessResponse(c, map[string]string{
-			"accessToken": "new-access-token",
+			"accessToken":  newAccessToken,
 			"refreshToken": req.RefreshToken,
 		})
 	}
 }
 
 // Logout 登出
-func Logout(redis *redis.Client) echo.HandlerFunc {
+func Logout(redisClient *redis.Client) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 将token加入黑名单
-		
-		return SuccessResponse(c, nil)
+		// 获取token
+		token := c.Request().Header.Get("Authorization")
+		if token != "" && len(token) > 7 {
+			token = token[7:] // 去掉 "Bearer " 前缀
+		}
+
+		// 将token加入黑名单，设置过期时间为token剩余有效期
+		if token != "" && redisClient != nil {
+			ctx := c.Request().Context()
+			// 设置2小时过期（与token有效期一致）
+			redisClient.Set(ctx, "blacklist:"+token, "1", 2*time.Hour)
+		}
+
+		return SuccessResponse(c, map[string]string{
+			"message": "登出成功",
+		})
 	}
 }
 
 // SelectRole 选择角色（多角色用户）
-func SelectRole(db *gorm.DB, redis *redis.Client) echo.HandlerFunc {
+func SelectRole(db *gorm.DB, redisClient *redis.Client) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		type SelectRoleRequest struct {
 			Role   string `json:"role" validate:"required"`
@@ -208,10 +257,33 @@ func SelectRole(db *gorm.DB, redis *redis.Client) echo.HandlerFunc {
 			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
 		}
 
-		// TODO: 验证用户是否有该角色权限，生成新的token
+		// 验证用户是否有该角色权限
+		var user database.User
+		if err := db.First(&user, userID).Error; err != nil {
+			return ErrorResponse(c, http.StatusNotFound, "用户不存在")
+		}
+
+		// 检查请求的角色是否与用户角色匹配
+		if string(user.Role) != req.Role {
+			return ErrorResponse(c, http.StatusForbidden, "无权切换到该角色")
+		}
+
+		// 生成新的token
+		sessionID := generateSessionID()
+		newToken, err := middleware.GenerateToken(
+			uint(userID),
+			req.Role,
+			req.RoleID,
+			sessionID,
+			"your-jwt-secret-key-change-in-production",
+			2*time.Hour,
+		)
+		if err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "生成令牌失败")
+		}
 
 		return SuccessResponse(c, map[string]string{
-			"token": "new-token-with-selected-role",
+			"token": newToken,
 		})
 	}
 }
@@ -320,6 +392,11 @@ func ChangePassword(db *gorm.DB) echo.HandlerFunc {
 			return ErrorResponse(c, http.StatusBadRequest, "密码格式不正确")
 		}
 
+		// 验证新密码强度
+		if err := validatePasswordStrength(req.NewPassword); err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, err.Error())
+		}
+
 		var user database.User
 		if err := db.First(&user, userID).Error; err != nil {
 			return ErrorResponse(c, http.StatusNotFound, "用户不存在")
@@ -328,6 +405,11 @@ func ChangePassword(db *gorm.DB) echo.HandlerFunc {
 		// 验证旧密码
 		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
 			return ErrorResponse(c, http.StatusUnauthorized, "原密码错误")
+		}
+
+		// 检查新密码是否与旧密码相同
+		if req.OldPassword == req.NewPassword {
+			return ErrorResponse(c, http.StatusBadRequest, "新密码不能与原密码相同")
 		}
 
 		// 生成新密码哈希
@@ -343,6 +425,51 @@ func ChangePassword(db *gorm.DB) echo.HandlerFunc {
 
 		return SuccessResponse(c, nil)
 	}
+}
+
+// validatePasswordStrength 验证密码强度
+func validatePasswordStrength(password string) error {
+	// 检查密码长度
+	if len(password) < 8 {
+		return fmt.Errorf("密码长度至少8位")
+	}
+	if len(password) > 128 {
+		return fmt.Errorf("密码长度不能超过128位")
+	}
+
+	var hasUpper, hasLower, hasNumber bool
+
+	for _, char := range password {
+		switch {
+		case char >= 'A' && char <= 'Z':
+			hasUpper = true
+		case char >= 'a' && char <= 'z':
+			hasLower = true
+		case char >= '0' && char <= '9':
+			hasNumber = true
+		}
+	}
+
+	if !hasUpper {
+		return fmt.Errorf("密码需包含大写字母")
+	}
+	if !hasLower {
+		return fmt.Errorf("密码需包含小写字母")
+	}
+	if !hasNumber {
+		return fmt.Errorf("密码需包含数字")
+	}
+
+	// 检查常见弱密码
+	commonPasswords := map[string]bool{
+		"password": true, "12345678": true, "123456789": true,
+		"qwerty": true, "admin123": true, "password1": true,
+	}
+	if commonPasswords[password] {
+		return fmt.Errorf("密码过于简单，请使用更复杂的密码")
+	}
+
+	return nil
 }
 
 // getUserRoleInfo 获取用户角色信息
@@ -404,6 +531,6 @@ func getUserRoleInfo(db *gorm.DB, user *database.User) (*UserInfo, []AvailableRo
 
 // generateSessionID 生成会话ID
 func generateSessionID() string {
-	// TODO: 实现会话ID生成逻辑
-	return "session-" + time.Now().Format("20060102150405")
+	// 生成唯一会话ID：时间戳 + 随机字符串
+	return fmt.Sprintf("session-%s-%d", time.Now().Format("20060102150405"), time.Now().UnixNano()%10000)
 }

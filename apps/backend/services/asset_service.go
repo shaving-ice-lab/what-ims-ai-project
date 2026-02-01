@@ -1,8 +1,10 @@
 package services
 
 import (
+	"strconv"
 	"time"
 
+	"github.com/project/backend/models"
 	"gorm.io/gorm"
 )
 
@@ -18,19 +20,19 @@ func NewAssetService(db *gorm.DB) *AssetService {
 
 // ImageAsset 图片素材
 type ImageAsset struct {
-	ID          uint64    `gorm:"primaryKey" json:"id"`
-	Name        string    `gorm:"type:varchar(200);not null" json:"name"`
-	URL         string    `gorm:"type:varchar(500);not null" json:"url"`
-	CategoryID  *uint64   `json:"categoryId"`
-	Brand       string    `gorm:"type:varchar(100)" json:"brand"`
-	Tags        string    `gorm:"type:varchar(500)" json:"tags"` // 逗号分隔
-	SkuCode     string    `gorm:"type:varchar(50)" json:"skuCode"`
-	Width       int       `json:"width"`
-	Height      int       `json:"height"`
-	FileSize    int64     `json:"fileSize"`
-	UseCount    int64     `json:"useCount"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID         uint64    `gorm:"primaryKey" json:"id"`
+	Name       string    `gorm:"type:varchar(200);not null" json:"name"`
+	URL        string    `gorm:"type:varchar(500);not null" json:"url"`
+	CategoryID *uint64   `json:"categoryId"`
+	Brand      string    `gorm:"type:varchar(100)" json:"brand"`
+	Tags       string    `gorm:"type:varchar(500)" json:"tags"` // 逗号分隔
+	SkuCode    string    `gorm:"type:varchar(50)" json:"skuCode"`
+	Width      int       `json:"width"`
+	Height     int       `json:"height"`
+	FileSize   int64     `json:"fileSize"`
+	UseCount   int64     `json:"useCount"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 // TableName 表名
@@ -40,11 +42,11 @@ func (ImageAsset) TableName() string {
 
 // ImageMatchConfig 图片匹配配置
 type ImageMatchConfig struct {
-	AutoMatchEnabled    bool    `json:"autoMatchEnabled"`
+	AutoMatchEnabled        bool    `json:"autoMatchEnabled"`
 	NameSimilarityThreshold float64 `json:"nameSimilarityThreshold"` // 默认0.8
-	BrandExactMatch     bool    `json:"brandExactMatch"`
-	SpecExactMatch      bool    `json:"specExactMatch"`
-	SkuExactMatch       bool    `json:"skuExactMatch"`
+	BrandExactMatch         bool    `json:"brandExactMatch"`
+	SpecExactMatch          bool    `json:"specExactMatch"`
+	SkuExactMatch           bool    `json:"skuExactMatch"`
 }
 
 // AssetQueryParams 素材查询参数
@@ -147,16 +149,16 @@ func (s *AssetService) GetAssetUsageStats(id uint64) (map[string]interface{}, er
 		Scan(&products)
 
 	return map[string]interface{}{
-		"asset":        asset,
-		"useCount":     len(products),
-		"products":     products,
+		"asset":    asset,
+		"useCount": len(products),
+		"products": products,
 	}, nil
 }
 
 // MatchImageForProduct 为产品匹配图片
 func (s *AssetService) MatchImageForProduct(productName, brand, spec, skuCode string) (*ImageAsset, float64, error) {
 	var asset ImageAsset
-	var confidence float64 = 0
+	_ = float64(0) // placeholder for confidence calculation
 
 	// 1. SKU精确匹配（最高优先级）
 	if skuCode != "" {
@@ -233,12 +235,52 @@ func (s *AssetService) GetMatchConfig() (*ImageMatchConfig, error) {
 		SpecExactMatch:          false,
 		SkuExactMatch:           true,
 	}
-	// TODO: 从system_configs表读取配置
+
+	// 从system_configs表读取配置
+	var sysConfig models.SystemConfig
+	if err := s.db.Where("config_key = ?", "image_match_auto_enabled").First(&sysConfig).Error; err == nil {
+		config.AutoMatchEnabled = sysConfig.ConfigValue == "true"
+	}
+	if err := s.db.Where("config_key = ?", "image_match_name_threshold").First(&sysConfig).Error; err == nil {
+		if v, e := strconv.ParseFloat(sysConfig.ConfigValue, 64); e == nil {
+			config.NameSimilarityThreshold = v
+		}
+	}
+	if err := s.db.Where("config_key = ?", "image_match_brand_exact").First(&sysConfig).Error; err == nil {
+		config.BrandExactMatch = sysConfig.ConfigValue == "true"
+	}
+	if err := s.db.Where("config_key = ?", "image_match_spec_exact").First(&sysConfig).Error; err == nil {
+		config.SpecExactMatch = sysConfig.ConfigValue == "true"
+	}
+	if err := s.db.Where("config_key = ?", "image_match_sku_exact").First(&sysConfig).Error; err == nil {
+		config.SkuExactMatch = sysConfig.ConfigValue == "true"
+	}
+
 	return config, nil
 }
 
 // SaveMatchConfig 保存匹配配置
 func (s *AssetService) SaveMatchConfig(config *ImageMatchConfig) error {
-	// TODO: 保存到system_configs表
+	// 保存到system_configs表
+	configs := map[string]string{
+		"image_match_auto_enabled":   strconv.FormatBool(config.AutoMatchEnabled),
+		"image_match_name_threshold": strconv.FormatFloat(config.NameSimilarityThreshold, 'f', 2, 64),
+		"image_match_brand_exact":    strconv.FormatBool(config.BrandExactMatch),
+		"image_match_spec_exact":     strconv.FormatBool(config.SpecExactMatch),
+		"image_match_sku_exact":      strconv.FormatBool(config.SkuExactMatch),
+	}
+
+	for key, value := range configs {
+		result := s.db.Model(&models.SystemConfig{}).Where("config_key = ?", key).
+			Update("config_value", value)
+		if result.RowsAffected == 0 {
+			// 如果不存在则创建
+			s.db.Create(&models.SystemConfig{
+				ConfigKey:   key,
+				ConfigValue: value,
+				ConfigType:  "string",
+			})
+		}
+	}
 	return nil
 }

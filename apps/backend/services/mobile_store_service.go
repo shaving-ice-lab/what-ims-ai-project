@@ -30,13 +30,13 @@ type MaterialCard struct {
 
 // MaterialDetail 物料详情
 type MaterialDetail struct {
-	ID          uint64          `json:"id"`
-	Name        string          `json:"name"`
-	Image       string          `json:"image"`
-	CategoryID  uint64          `json:"categoryId"`
-	Brands      []string        `json:"brands"`
-	Specs       []string        `json:"specs"`
-	Suppliers   []SupplierQuote `json:"suppliers"`
+	ID         uint64          `json:"id"`
+	Name       string          `json:"name"`
+	Image      string          `json:"image"`
+	CategoryID uint64          `json:"categoryId"`
+	Brands     []string        `json:"brands"`
+	Specs      []string        `json:"specs"`
+	Suppliers  []SupplierQuote `json:"suppliers"`
 }
 
 // SupplierQuote 供应商报价
@@ -51,8 +51,8 @@ type SupplierQuote struct {
 	InStock      bool     `json:"inStock"`
 }
 
-// CartItem 购物车项
-type CartItem struct {
+// MobileCartItem 移动端购物车项
+type MobileCartItem struct {
 	ID           uint64  `json:"id"`
 	MaterialID   uint64  `json:"materialId"`
 	MaterialName string  `json:"materialName"`
@@ -68,13 +68,13 @@ type CartItem struct {
 
 // CartGroup 购物车分组（按供应商）
 type CartGroup struct {
-	SupplierID     uint64     `json:"supplierId"`
-	SupplierName   string     `json:"supplierName"`
-	MinOrderAmount float64    `json:"minOrderAmount"`
-	CurrentAmount  float64    `json:"currentAmount"`
-	CanCheckout    bool       `json:"canCheckout"`
-	Gap            float64    `json:"gap"`
-	Items          []CartItem `json:"items"`
+	SupplierID     uint64           `json:"supplierId"`
+	SupplierName   string           `json:"supplierName"`
+	MinOrderAmount float64          `json:"minOrderAmount"`
+	CurrentAmount  float64          `json:"currentAmount"`
+	CanCheckout    bool             `json:"canCheckout"`
+	Gap            float64          `json:"gap"`
+	Items          []MobileCartItem `json:"items"`
 }
 
 // GetHomeCategories 获取首页分类
@@ -104,8 +104,8 @@ func (s *MobileStoreService) GetHotMaterials(storeID uint64, page, pageSize int)
 			c.name as category_name,
 			(SELECT COUNT(DISTINCT brand) FROM material_skus WHERE material_id = m.id) as brand_count,
 			(SELECT COUNT(DISTINCT spec) FROM material_skus WHERE material_id = m.id) as spec_count,
-			(SELECT MIN(sp.price) FROM supplier_products sp 
-			 JOIN material_skus ms ON ms.id = sp.material_sku_id 
+			(SELECT MIN(sp.price) FROM supplier_products sp
+			 JOIN material_skus ms ON ms.id = sp.material_sku_id
 			 WHERE ms.material_id = m.id AND sp.is_active = true) as min_price
 		`).
 		Joins("LEFT JOIN categories c ON c.id = m.category_id").
@@ -139,8 +139,8 @@ func (s *MobileStoreService) SearchMaterials(keyword string, categoryID *uint64,
 			c.name as category_name,
 			(SELECT COUNT(DISTINCT brand) FROM material_skus WHERE material_id = m.id) as brand_count,
 			(SELECT COUNT(DISTINCT spec) FROM material_skus WHERE material_id = m.id) as spec_count,
-			(SELECT MIN(sp.price) FROM supplier_products sp 
-			 JOIN material_skus ms ON ms.id = sp.material_sku_id 
+			(SELECT MIN(sp.price) FROM supplier_products sp
+			 JOIN material_skus ms ON ms.id = sp.material_sku_id
 			 WHERE ms.material_id = m.id AND sp.is_active = true) as min_price
 		`).
 		Joins("LEFT JOIN categories c ON c.id = m.category_id").
@@ -225,7 +225,7 @@ func (s *MobileStoreService) GetMaterialDetail(storeID, materialID uint64) (*Mat
 
 // GetCart 获取购物车
 func (s *MobileStoreService) GetCart(storeID uint64) ([]CartGroup, error) {
-	var items []CartItem
+	var items []MobileCartItem
 	s.db.Table("cart_items ci").
 		Select(`
 			ci.id,
@@ -260,7 +260,7 @@ func (s *MobileStoreService) GetCart(storeID uint64) ([]CartGroup, error) {
 				SupplierID:     item.SupplierID,
 				SupplierName:   item.SupplierName,
 				MinOrderAmount: minAmt,
-				Items:          []CartItem{},
+				Items:          []MobileCartItem{},
 			}
 		}
 		groupMap[item.SupplierID].Items = append(groupMap[item.SupplierID].Items, item)

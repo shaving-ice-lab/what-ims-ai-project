@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strconv"
 	"time"
 
 	"gorm.io/gorm"
@@ -21,8 +22,8 @@ type Category struct {
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
-	Parent   *Category   `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
-	Children []*Category `gorm:"foreignKey:ParentID" json:"children,omitempty"`
+	Parent    *Category   `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
+	Children  []*Category `gorm:"foreignKey:ParentID" json:"children,omitempty"`
 	Materials []*Material `gorm:"foreignKey:CategoryID" json:"materials,omitempty"`
 }
 
@@ -50,10 +51,11 @@ func (c *Category) BeforeCreate(tx *gorm.DB) error {
 			return err
 		}
 		c.Level = parent.Level + 1
+		parentID := strconv.FormatUint(parent.ID, 10)
 		if parent.Path == "" {
-			c.Path = string(parent.ID)
+			c.Path = parentID
 		} else {
-			c.Path = parent.Path + "/" + string(parent.ID)
+			c.Path = parent.Path + "/" + parentID
 		}
 	}
 
@@ -73,7 +75,7 @@ func (c *Category) IsTopLevel() bool {
 // GetFullPath returns the full path including this category
 func (c *Category) GetFullPath() string {
 	if c.Path == "" {
-		return string(c.ID)
+		return strconv.FormatUint(c.ID, 10)
 	}
-	return c.Path + "/" + string(c.ID)
+	return c.Path + "/" + strconv.FormatUint(c.ID, 10)
 }

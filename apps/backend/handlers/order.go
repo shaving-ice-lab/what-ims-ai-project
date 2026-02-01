@@ -1,13 +1,14 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 	"github.com/project/backend/models"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -94,8 +95,43 @@ func GetOrderDetailAdmin(db *gorm.DB) echo.HandlerFunc {
 // UpdateOrderStatusAdmin 管理员更新订单状态
 func UpdateOrderStatusAdmin(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现管理员更新订单状态
-		return SuccessResponse(c, nil)
+		if !IsAdmin(c) {
+			return ErrorResponse(c, http.StatusForbidden, "无权访问")
+		}
+
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		type UpdateStatusRequest struct {
+			Status string `json:"status" validate:"required"`
+			Remark string `json:"remark"`
+		}
+
+		var req UpdateStatusRequest
+		if err := c.Bind(&req); err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "请求参数错误")
+		}
+
+		var order models.Order
+		if err := db.First(&order, id).Error; err != nil {
+			return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+		}
+
+		// 更新订单状态
+		updates := map[string]interface{}{
+			"status": models.OrderStatus(req.Status),
+		}
+		if req.Remark != "" {
+			updates["remark"] = req.Remark
+		}
+
+		if err := db.Model(&order).Updates(updates).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "更新失败")
+		}
+
+		return SuccessResponse(c, order)
 	}
 }
 
@@ -219,16 +255,68 @@ func ConfirmOrder(db *gorm.DB) echo.HandlerFunc {
 // DeliverOrder 开始配送
 func DeliverOrder(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现开始配送
-		return SuccessResponse(c, nil)
+		supplierID := GetSupplierID(c)
+		if supplierID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		var order models.Order
+		if err := db.Where("id = ? AND supplier_id = ?", id, supplierID).First(&order).Error; err != nil {
+			return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+		}
+
+		// 只有已确认的订单可以开始配送
+		if order.Status != models.OrderStatusConfirmed {
+			return ErrorResponse(c, http.StatusBadRequest, "订单状态不允许配送")
+		}
+
+		if err := db.Model(&order).Update("status", models.OrderStatusDelivering).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "更新失败")
+		}
+
+		return SuccessResponse(c, order)
 	}
 }
 
 // CompleteOrder 完成订单
 func CompleteOrder(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现完成订单
-		return SuccessResponse(c, nil)
+		supplierID := GetSupplierID(c)
+		if supplierID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		var order models.Order
+		if err := db.Where("id = ? AND supplier_id = ?", id, supplierID).First(&order).Error; err != nil {
+			return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+		}
+
+		// 只有配送中的订单可以完成
+		if order.Status != models.OrderStatusDelivering {
+			return ErrorResponse(c, http.StatusBadRequest, "订单状态不允许完成")
+		}
+
+		now := time.Now()
+		updates := map[string]interface{}{
+			"status":       models.OrderStatusCompleted,
+			"completed_at": &now,
+		}
+
+		if err := db.Model(&order).Updates(updates).Error; err != nil {
+			return ErrorResponse(c, http.StatusInternalServerError, "更新失败")
+		}
+
+		return SuccessResponse(c, order)
 	}
 }
 
@@ -285,8 +373,25 @@ func GetOrdersStore(db *gorm.DB) echo.HandlerFunc {
 // GetOrderDetailStore 门店获取订单详情
 func GetOrderDetailStore(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现门店获取订单详情
-		return SuccessResponse(c, nil)
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		var order models.Order
+		if err := db.Where("id = ? AND store_id = ?", id, storeID).
+			Preload("OrderItems").
+			Preload("Supplier").
+			First(&order).Error; err != nil {
+			return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+		}
+
+		return SuccessResponse(c, order)
 	}
 }
 
@@ -410,8 +515,12 @@ func CreateOrder(db *gorm.DB, redis *redis.Client) echo.HandlerFunc {
 			}
 		}
 
-		// 清空购物车（如果需要）
-		// TODO: 清空Redis中对应供应商的购物车
+		// 清空购物车中对应供应商的商品
+		if redis != nil {
+			ctx := c.Request().Context()
+			cartKey := fmt.Sprintf("cart:%d:%d", storeID, req.SupplierID)
+			redis.Del(ctx, cartKey)
+		}
 
 		tx.Commit()
 
@@ -609,17 +718,72 @@ func GetCancelRequestStatus(db *gorm.DB) echo.HandlerFunc {
 // ReorderItems 再来一单
 func ReorderItems(db *gorm.DB, redis *redis.Client) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现再来一单
-		return SuccessResponse(c, nil)
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		// 获取原订单及其明细
+		var order models.Order
+		if err := db.Where("id = ? AND store_id = ?", id, storeID).
+			Preload("OrderItems").First(&order).Error; err != nil {
+			return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+		}
+
+		// 返回订单明细供前端加入购物车
+		var items []map[string]interface{}
+		for _, item := range order.OrderItems {
+			items = append(items, map[string]interface{}{
+				"materialSkuId": item.MaterialSkuID,
+				"quantity":      item.Quantity,
+				"supplierId":    order.SupplierID,
+			})
+		}
+
+		return SuccessResponse(c, map[string]interface{}{
+			"supplierId": order.SupplierID,
+			"items":      items,
+		})
 	}
 }
 
 // GeneratePaymentQRCode 生成支付二维码
 func GeneratePaymentQRCode(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现生成支付二维码
-		return SuccessResponse(c, map[string]string{
-			"qrCodeUrl": "https://example.com/qrcode",
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		var order models.Order
+		if err := db.Where("id = ? AND store_id = ?", id, storeID).First(&order).Error; err != nil {
+			return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+		}
+
+		// 检查订单状态
+		if order.Status != models.OrderStatusPendingPayment {
+			return ErrorResponse(c, http.StatusBadRequest, "订单状态不允许支付")
+		}
+
+		// 生成支付二维码URL（实际生产中应调用支付服务）
+		qrCodeUrl := fmt.Sprintf("/api/payment/qrcode/%d?amount=%.2f", order.ID, order.TotalAmount)
+
+		return SuccessResponse(c, map[string]interface{}{
+			"qrCodeUrl":   qrCodeUrl,
+			"orderId":     order.ID,
+			"orderNo":     order.OrderNo,
+			"totalAmount": order.TotalAmount,
+			"expireTime":  time.Now().Add(30 * time.Minute).Format(time.RFC3339),
 		})
 	}
 }
@@ -627,9 +791,22 @@ func GeneratePaymentQRCode(db *gorm.DB) echo.HandlerFunc {
 // GetPaymentStatus 获取支付状态
 func GetPaymentStatus(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现获取支付状态
-		return SuccessResponse(c, map[string]string{
-			"status": "unpaid",
+		id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+		if err != nil {
+			return ErrorResponse(c, http.StatusBadRequest, "无效的订单ID")
+		}
+
+		var order models.Order
+		if err := db.Select("id, order_no, status, payment_status, total_amount").First(&order, id).Error; err != nil {
+			return ErrorResponse(c, http.StatusNotFound, "订单不存在")
+		}
+
+		return SuccessResponse(c, map[string]interface{}{
+			"orderId":       order.ID,
+			"orderNo":       order.OrderNo,
+			"status":        order.Status,
+			"paymentStatus": order.PaymentStatus,
+			"totalAmount":   order.TotalAmount,
 		})
 	}
 }
@@ -725,6 +902,18 @@ func ExportOrdersExcel(db *gorm.DB) echo.HandlerFunc {
 			if order.Remark != nil {
 				remark = *order.Remark
 			}
+			deliveryAddress := ""
+			if order.DeliveryAddress != nil {
+				deliveryAddress = *order.DeliveryAddress
+			}
+			deliveryContact := ""
+			if order.DeliveryContact != nil {
+				deliveryContact = *order.DeliveryContact
+			}
+			deliveryPhone := ""
+			if order.DeliveryPhone != nil {
+				deliveryPhone = *order.DeliveryPhone
+			}
 
 			row := ExportRow{
 				OrderNo:          order.OrderNo,
@@ -737,9 +926,9 @@ func ExportOrdersExcel(db *gorm.DB) echo.HandlerFunc {
 				ItemCount:        order.ItemCount,
 				Status:           statusMap[order.Status],
 				PaymentStatus:    string(order.PaymentStatus),
-				DeliveryAddress:  order.DeliveryAddress,
-				DeliveryContact:  order.DeliveryContact,
-				DeliveryPhone:    order.DeliveryPhone,
+				DeliveryAddress:  deliveryAddress,
+				DeliveryContact:  deliveryContact,
+				DeliveryPhone:    deliveryPhone,
 				ExpectedDelivery: expectedDelivery,
 				Remark:           remark,
 				CreatedAt:        order.CreatedAt.Format("2006-01-02 15:04:05"),

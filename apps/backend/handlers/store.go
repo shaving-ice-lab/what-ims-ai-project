@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 	"github.com/project/backend/models"
+	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -103,7 +104,7 @@ func GetMaterialSuppliers(db *gorm.DB) echo.HandlerFunc {
 		}
 
 		var supplierMaterials []models.SupplierMaterial
-		if err := db.Where("material_sku_id = ? AND status = ? AND audit_status = ?", 
+		if err := db.Where("material_sku_id = ? AND status = ? AND audit_status = ?",
 			skuID, 1, models.AuditStatusApproved).
 			Preload("Supplier").
 			Order("price ASC").
@@ -116,7 +117,7 @@ func GetMaterialSuppliers(db *gorm.DB) echo.HandlerFunc {
 }
 
 // GetCart 获取购物车
-func GetCart(redis *redis.Client) echo.HandlerFunc {
+func GetCart(redis *goredis.Client) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		storeID := GetStoreID(c)
 		if storeID == 0 {
@@ -132,7 +133,7 @@ func GetCart(redis *redis.Client) echo.HandlerFunc {
 		ctx := context.Background()
 
 		data, err := redis.Get(ctx, key).Result()
-		if err == redis.Nil {
+		if err == goredis.Nil {
 			return SuccessResponse(c, map[string]interface{}{
 				"items": []interface{}{},
 				"total": 0,
@@ -159,11 +160,11 @@ func AddToCart(redis *redis.Client, db *gorm.DB) echo.HandlerFunc {
 		}
 
 		type AddToCartRequest struct {
-			SupplierID        uint64  `json:"supplierId" validate:"required"`
+			SupplierID         uint64  `json:"supplierId" validate:"required"`
 			SupplierMaterialID uint64  `json:"supplierMaterialId" validate:"required"`
-			Quantity          int     `json:"quantity" validate:"required,min=1"`
-			UnitPrice         float64 `json:"unitPrice" validate:"required"`
-			FinalPrice        float64 `json:"finalPrice" validate:"required"`
+			Quantity           int     `json:"quantity" validate:"required,min=1"`
+			UnitPrice          float64 `json:"unitPrice" validate:"required"`
+			FinalPrice         float64 `json:"finalPrice" validate:"required"`
 		}
 
 		var req AddToCartRequest
@@ -191,7 +192,7 @@ func AddToCart(redis *redis.Client, db *gorm.DB) echo.HandlerFunc {
 		// 获取现有购物车数据
 		var cart map[string]interface{}
 		data, err := redis.Get(ctx, key).Result()
-		if err == redis.Nil {
+		if err == goredis.Nil {
 			cart = map[string]interface{}{
 				"items": []map[string]interface{}{},
 				"total": 0.0,
@@ -270,9 +271,9 @@ func UpdateCartItem(redis *redis.Client) echo.HandlerFunc {
 		}
 
 		type UpdateCartRequest struct {
-			SupplierID        uint64 `json:"supplierId" validate:"required"`
+			SupplierID         uint64 `json:"supplierId" validate:"required"`
 			SupplierMaterialID uint64 `json:"supplierMaterialId" validate:"required"`
-			Quantity          int    `json:"quantity" validate:"required,min=0"`
+			Quantity           int    `json:"quantity" validate:"required,min=0"`
 		}
 
 		var req UpdateCartRequest
@@ -435,16 +436,66 @@ func ClearCart(redis *redis.Client) echo.HandlerFunc {
 // GetMarketPrices 获取市场价格
 func GetMarketPrices(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现获取市场价格
-		return SuccessResponse(c, []interface{}{})
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		// 获取物料SKU价格列表
+		type PriceInfo struct {
+			MaterialSkuID uint64  `json:"materialSkuId"`
+			MaterialName  string  `json:"materialName"`
+			SkuSpec       string  `json:"skuSpec"`
+			SupplierID    uint64  `json:"supplierId"`
+			SupplierName  string  `json:"supplierName"`
+			Price         float64 `json:"price"`
+		}
+
+		var prices []PriceInfo
+		db.Table("supplier_materials sm").
+			Select("sm.material_sku_id, m.name as material_name, ms.spec as sku_spec, sm.supplier_id, s.name as supplier_name, sm.price").
+			Joins("JOIN material_skus ms ON sm.material_sku_id = ms.id").
+			Joins("JOIN materials m ON ms.material_id = m.id").
+			Joins("JOIN suppliers s ON sm.supplier_id = s.id").
+			Where("sm.status = 1 AND sm.deleted_at IS NULL").
+			Order("m.name, sm.price").
+			Limit(100).
+			Scan(&prices)
+
+		return SuccessResponse(c, prices)
 	}
 }
 
 // ComparePrices 比较价格
 func ComparePrices(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现比较价格
-		return SuccessResponse(c, []interface{}{})
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		materialSkuID := c.QueryParam("materialSkuId")
+		if materialSkuID == "" {
+			return ErrorResponse(c, http.StatusBadRequest, "缺少物料SKU ID")
+		}
+
+		// 获取不同供应商的价格对比
+		type PriceComparison struct {
+			SupplierID   uint64  `json:"supplierId"`
+			SupplierName string  `json:"supplierName"`
+			Price        float64 `json:"price"`
+			Stock        int     `json:"stock"`
+		}
+
+		var comparisons []PriceComparison
+		db.Table("supplier_materials sm").
+			Select("sm.supplier_id, s.name as supplier_name, sm.price, sm.stock").
+			Joins("JOIN suppliers s ON sm.supplier_id = s.id").
+			Where("sm.material_sku_id = ? AND sm.status = 1 AND sm.deleted_at IS NULL", materialSkuID).
+			Order("sm.price ASC").
+			Scan(&comparisons)
+
+		return SuccessResponse(c, comparisons)
 	}
 }
 
@@ -483,8 +534,8 @@ func GetStoreStats(db *gorm.DB) echo.HandlerFunc {
 			Scan(&monthlyAmount)
 
 		return SuccessResponse(c, map[string]interface{}{
-			"totalOrders": totalOrders,
-			"totalAmount": totalAmount,
+			"totalOrders":   totalOrders,
+			"totalAmount":   totalAmount,
 			"monthlyOrders": monthlyOrders,
 			"monthlyAmount": monthlyAmount,
 		})
@@ -494,15 +545,61 @@ func GetStoreStats(db *gorm.DB) echo.HandlerFunc {
 // GetStoreOrderStats 获取门店订单统计
 func GetStoreOrderStats(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现获取门店订单统计
-		return SuccessResponse(c, []interface{}{})
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		// 获取近七天订单统计
+		now := time.Now()
+		sevenDaysAgo := now.AddDate(0, 0, -7)
+
+		type DailyStats struct {
+			Date        string  `json:"date"`
+			OrderCount  int64   `json:"orderCount"`
+			TotalAmount float64 `json:"totalAmount"`
+		}
+
+		var stats []DailyStats
+		db.Table("orders").
+			Select("DATE(created_at) as date, COUNT(*) as order_count, COALESCE(SUM(total_amount), 0) as total_amount").
+			Where("store_id = ? AND created_at >= ? AND status != ?", storeID, sevenDaysAgo, models.OrderStatusCancelled).
+			Group("DATE(created_at)").
+			Order("date DESC").
+			Scan(&stats)
+
+		return SuccessResponse(c, stats)
 	}
 }
 
 // GetStoreCategoryStats 获取门店分类统计
 func GetStoreCategoryStats(db *gorm.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO: 实现获取门店分类统计
-		return SuccessResponse(c, []interface{}{})
+		storeID := GetStoreID(c)
+		if storeID == 0 {
+			return ErrorResponse(c, http.StatusUnauthorized, "未授权")
+		}
+
+		// 获取各分类订货统计
+		type CategoryStats struct {
+			CategoryID   uint64  `json:"categoryId"`
+			CategoryName string  `json:"categoryName"`
+			OrderCount   int64   `json:"orderCount"`
+			TotalAmount  float64 `json:"totalAmount"`
+		}
+
+		var stats []CategoryStats
+		db.Table("order_items oi").
+			Select("c.id as category_id, c.name as category_name, COUNT(DISTINCT oi.order_id) as order_count, COALESCE(SUM(oi.subtotal), 0) as total_amount").
+			Joins("JOIN orders o ON oi.order_id = o.id").
+			Joins("JOIN material_skus ms ON oi.material_sku_id = ms.id").
+			Joins("JOIN materials m ON ms.material_id = m.id").
+			Joins("JOIN categories c ON m.category_id = c.id").
+			Where("o.store_id = ? AND o.status != ?", storeID, models.OrderStatusCancelled).
+			Group("c.id, c.name").
+			Order("total_amount DESC").
+			Scan(&stats)
+
+		return SuccessResponse(c, stats)
 	}
 }

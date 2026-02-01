@@ -1,6 +1,7 @@
 package services
 
 import (
+	"strconv"
 	"time"
 
 	"gorm.io/gorm"
@@ -29,16 +30,16 @@ type SystemConfig struct {
 
 // PaymentConfig 支付配置
 type PaymentConfig struct {
-	WechatEnabled     bool   `json:"wechatEnabled"`
-	WechatAppID       string `json:"wechatAppId"`
-	WechatMchID       string `json:"wechatMchId"`
-	WechatApiKey      string `json:"wechatApiKey"`     // 加密存储
-	WechatNotifyURL   string `json:"wechatNotifyUrl"`
-	AlipayEnabled     bool   `json:"alipayEnabled"`
-	AlipayAppID       string `json:"alipayAppId"`
-	AlipayPrivateKey  string `json:"alipayPrivateKey"` // 加密存储
-	AlipayPublicKey   string `json:"alipayPublicKey"`
-	AlipayNotifyURL   string `json:"alipayNotifyUrl"`
+	WechatEnabled    bool   `json:"wechatEnabled"`
+	WechatAppID      string `json:"wechatAppId"`
+	WechatMchID      string `json:"wechatMchId"`
+	WechatApiKey     string `json:"wechatApiKey"` // 加密存储
+	WechatNotifyURL  string `json:"wechatNotifyUrl"`
+	AlipayEnabled    bool   `json:"alipayEnabled"`
+	AlipayAppID      string `json:"alipayAppId"`
+	AlipayPrivateKey string `json:"alipayPrivateKey"` // 加密存储
+	AlipayPublicKey  string `json:"alipayPublicKey"`
+	AlipayNotifyURL  string `json:"alipayNotifyUrl"`
 }
 
 // APIConfig API配置
@@ -58,12 +59,12 @@ type OrderConfig struct {
 
 // DeliveryNoteTemplate 送货单模板
 type DeliveryNoteTemplate struct {
-	ID          uint64    `json:"id"`
-	Name        string    `json:"name"`
-	Content     string    `json:"content"` // HTML模板
-	IsDefault   bool      `json:"isDefault"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID        uint64    `json:"id"`
+	Name      string    `json:"name"`
+	Content   string    `json:"content"` // HTML模板
+	IsDefault bool      `json:"isDefault"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // GetConfig 获取配置
@@ -160,13 +161,46 @@ func (s *SystemConfigService) GetOrderConfig() (*OrderConfig, error) {
 		ServiceFeeRate:      0.03,
 		MinServiceFee:       1.0,
 	}
-	// TODO: 从数据库读取
+
+	// 从数据库读取配置
+	if val, err := s.GetConfig("order_cancel_time_threshold"); err == nil && val != "" {
+		if v, e := strconv.Atoi(val); e == nil {
+			config.CancelTimeThreshold = v
+		}
+	}
+	if val, err := s.GetConfig("order_payment_timeout"); err == nil && val != "" {
+		if v, e := strconv.Atoi(val); e == nil {
+			config.PaymentTimeout = v
+		}
+	}
+	if val, err := s.GetConfig("order_service_fee_rate"); err == nil && val != "" {
+		if v, e := strconv.ParseFloat(val, 64); e == nil {
+			config.ServiceFeeRate = v
+		}
+	}
+	if val, err := s.GetConfig("order_min_service_fee"); err == nil && val != "" {
+		if v, e := strconv.ParseFloat(val, 64); e == nil {
+			config.MinServiceFee = v
+		}
+	}
+
 	return config, nil
 }
 
 // SaveOrderConfig 保存订单配置
 func (s *SystemConfigService) SaveOrderConfig(config *OrderConfig) error {
-	// TODO: 保存到数据库
+	// 保存到数据库
+	configs := map[string]string{
+		"order_cancel_time_threshold": strconv.Itoa(config.CancelTimeThreshold),
+		"order_payment_timeout":       strconv.Itoa(config.PaymentTimeout),
+		"order_service_fee_rate":      strconv.FormatFloat(config.ServiceFeeRate, 'f', 4, 64),
+		"order_min_service_fee":       strconv.FormatFloat(config.MinServiceFee, 'f', 2, 64),
+	}
+	for key, value := range configs {
+		if err := s.SetConfig(key, value, "string", "", "order"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

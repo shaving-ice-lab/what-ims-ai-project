@@ -5,16 +5,18 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/project/backend/models"
+	"gorm.io/gorm"
 )
 
 // DeliverySettingHandler 配送设置处理器
 type DeliverySettingHandler struct {
-	// service *services.DeliverySettingService
+	db *gorm.DB
 }
 
 // NewDeliverySettingHandler 创建配送设置处理器
-func NewDeliverySettingHandler() *DeliverySettingHandler {
-	return &DeliverySettingHandler{}
+func NewDeliverySettingHandler(db *gorm.DB) *DeliverySettingHandler {
+	return &DeliverySettingHandler{db: db}
 }
 
 // UpdateDeliverySettingRequest 更新配送设置请求
@@ -29,15 +31,29 @@ type UpdateDeliverySettingReq struct {
 // @Success 200 {object} map[string]interface{}
 // @Router /supplier/delivery-settings [get]
 func (h *DeliverySettingHandler) GetDeliverySetting(c echo.Context) error {
-	// TODO: 从上下文获取供应商ID并调用service
+	supplierID := GetSupplierID(c)
+	if supplierID == 0 {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "未授权",
+		})
+	}
+
+	var supplier models.Supplier
+	if err := h.db.Select("min_order_amount, delivery_days, delivery_mode").First(&supplier, supplierID).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]interface{}{
+			"code":    404,
+			"message": "供应商不存在",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
 		"message": "获取成功",
 		"data": map[string]interface{}{
-			"minOrderAmount": 100.00,
-			"deliveryDays":   "1,2,3,4,5",
-			"auditStatus":    "approved",
+			"minOrderAmount": supplier.MinOrderAmount,
+			"deliveryDays":   supplier.DeliveryDays,
+			"deliveryMode":   supplier.DeliveryMode,
 		},
 	})
 }
@@ -59,11 +75,29 @@ func (h *DeliverySettingHandler) UpdateDeliverySetting(c echo.Context) error {
 		})
 	}
 
-	// TODO: 调用service更新配送设置
+	supplierID := GetSupplierID(c)
+	if supplierID == 0 {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "未授权",
+		})
+	}
+
+	updates := map[string]interface{}{
+		"min_order_amount": req.MinOrderAmount,
+		"delivery_days":    req.DeliveryDays,
+	}
+
+	if err := h.db.Model(&models.Supplier{}).Where("id = ?", supplierID).Updates(updates).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "更新失败",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
-		"message": "提交成功，等待审核",
+		"message": "更新成功",
 	})
 }
 
@@ -73,12 +107,26 @@ func (h *DeliverySettingHandler) UpdateDeliverySetting(c echo.Context) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /supplier/delivery-areas [get]
 func (h *DeliverySettingHandler) GetDeliveryAreas(c echo.Context) error {
-	// TODO: 调用service获取配送区域
+	supplierID := GetSupplierID(c)
+	if supplierID == 0 {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "未授权",
+		})
+	}
+
+	var areas []models.DeliveryArea
+	if err := h.db.Where("supplier_id = ?", supplierID).Find(&areas).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "查询失败",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
 		"message": "获取成功",
-		"data":    []interface{}{},
+		"data":    areas,
 	})
 }
 
@@ -106,11 +154,32 @@ func (h *DeliverySettingHandler) AddDeliveryArea(c echo.Context) error {
 		})
 	}
 
-	// TODO: 调用service添加配送区域
+	supplierID := GetSupplierID(c)
+	if supplierID == 0 {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "未授权",
+		})
+	}
+
+	area := &models.DeliveryArea{
+		SupplierID: supplierID,
+		Province:   req.Province,
+		City:       req.City,
+		District:   &req.District,
+	}
+
+	if err := h.db.Create(area).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "添加失败",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
-		"message": "添加成功，等待审核",
+		"message": "添加成功",
+		"data":    area,
 	})
 }
 
@@ -136,11 +205,35 @@ func (h *DeliverySettingHandler) BatchAddDeliveryAreas(c echo.Context) error {
 		})
 	}
 
-	// TODO: 调用service批量添加
+	supplierID := GetSupplierID(c)
+	if supplierID == 0 {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "未授权",
+		})
+	}
+
+	var areas []models.DeliveryArea
+	for _, a := range req.Areas {
+		areas = append(areas, models.DeliveryArea{
+			SupplierID: supplierID,
+			Province:   a.Province,
+			City:       a.City,
+			District:   &a.District,
+		})
+	}
+
+	if err := h.db.Create(&areas).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "批量添加失败",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
 		"message": "批量添加成功",
+		"data":    areas,
 	})
 }
 
@@ -159,8 +252,20 @@ func (h *DeliverySettingHandler) DeleteDeliveryArea(c echo.Context) error {
 		})
 	}
 
-	// TODO: 调用service删除配送区域
-	_ = id
+	supplierID := GetSupplierID(c)
+	if supplierID == 0 {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "未授权",
+		})
+	}
+
+	if err := h.db.Where("id = ? AND supplier_id = ?", id, supplierID).Delete(&models.DeliveryArea{}).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "删除失败",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
@@ -176,14 +281,47 @@ func (h *DeliverySettingHandler) DeleteDeliveryArea(c echo.Context) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /supplier/waybills [get]
 func (h *DeliverySettingHandler) GetWaybills(c echo.Context) error {
-	// TODO: 调用service获取运单列表
+	supplierID := GetSupplierID(c)
+	if supplierID == 0 {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "未授权",
+		})
+	}
+
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	if page <= 0 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(c.QueryParam("pageSize"))
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	// 获取该供应商的订单运单信息
+	var orders []models.Order
+	var total int64
+
+	query := h.db.Model(&models.Order{}).Where("supplier_id = ? AND status IN (?)", supplierID, []string{"delivering", "completed"})
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := query.Select("id, order_no, status, delivery_address, created_at").
+		Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&orders).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "查询失败",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
 		"message": "获取成功",
 		"data": map[string]interface{}{
-			"items": []interface{}{},
-			"total": 0,
+			"items":    orders,
+			"total":    total,
+			"page":     page,
+			"pageSize": pageSize,
 		},
 	})
 }
@@ -212,7 +350,29 @@ func (h *DeliverySettingHandler) CreateWaybill(c echo.Context) error {
 		})
 	}
 
-	// TODO: 调用service创建运单
+	supplierID := GetSupplierID(c)
+	if supplierID == 0 {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "未授权",
+		})
+	}
+
+	// 更新订单运单信息
+	updates := map[string]interface{}{
+		"waybill_no": req.WaybillNo,
+	}
+	if req.Carrier != "" {
+		updates["carrier"] = req.Carrier
+	}
+
+	if err := h.db.Model(&models.Order{}).Where("id = ? AND supplier_id = ?", req.OrderID, supplierID).
+		Updates(updates).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "创建失败",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
@@ -226,20 +386,26 @@ func (h *DeliverySettingHandler) CreateWaybill(c echo.Context) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /supplier/info [get]
 func (h *DeliverySettingHandler) GetSupplierInfo(c echo.Context) error {
-	// TODO: 从上下文获取供应商ID并查询信息
+	supplierID := GetSupplierID(c)
+	if supplierID == 0 {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "未授权",
+		})
+	}
+
+	var supplier models.Supplier
+	if err := h.db.First(&supplier, supplierID).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]interface{}{
+			"code":    404,
+			"message": "供应商不存在",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
 		"message": "获取成功",
-		"data": map[string]interface{}{
-			"id":              1,
-			"name":            "供应商名称",
-			"displayName":     "展示名称",
-			"contactPerson":   "联系人",
-			"phone":           "13800138000",
-			"address":         "供应商地址",
-			"deliverySetting": nil,
-		},
+		"data":    supplier,
 	})
 }
 
@@ -253,14 +419,39 @@ func (h *DeliverySettingHandler) GetSupplierInfo(c echo.Context) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /admin/delivery-settings/pending [get]
 func (h *DeliverySettingHandler) GetPendingAuditSettings(c echo.Context) error {
-	// TODO: 调用service获取待审核列表
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	if page <= 0 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(c.QueryParam("pageSize"))
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+
+	// 获取所有供应商配送设置（简化版，实际应有审核状态字段）
+	var suppliers []models.Supplier
+	var total int64
+
+	query := h.db.Model(&models.Supplier{}).Where("status = 1")
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	if err := query.Select("id, name, min_order_amount, delivery_days, delivery_mode").
+		Offset(offset).Limit(pageSize).Find(&suppliers).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "查询失败",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
 		"message": "获取成功",
 		"data": map[string]interface{}{
-			"items": []interface{}{},
-			"total": 0,
+			"items":    suppliers,
+			"total":    total,
+			"page":     page,
+			"pageSize": pageSize,
 		},
 	})
 }
@@ -297,8 +488,18 @@ func (h *DeliverySettingHandler) AuditDeliverySetting(c echo.Context) error {
 		})
 	}
 
-	// TODO: 调用service审核配送设置
-	_ = id
+	// 更新供应商状态（简化版）
+	status := int8(1) // 批准
+	if !req.Approved {
+		status = 0 // 拒绝
+	}
+
+	if err := h.db.Model(&models.Supplier{}).Where("id = ?", id).Update("status", status).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    500,
+			"message": "审核失败",
+		})
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    200,
