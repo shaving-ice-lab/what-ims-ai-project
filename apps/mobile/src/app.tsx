@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro';
 import { Provider } from 'react-redux';
 
 import './app.scss';
+import { subscribeOrderUpdates, subscribeNewOrderNotice } from './services/push';
 import { store } from './store';
 
 class App extends Component<PropsWithChildren> {
@@ -26,8 +27,31 @@ class App extends Component<PropsWithChildren> {
         Taro.redirectTo({
           url: '/pages/select-role/index',
         });
+        return;
       }
+
+      // 初始化推送订阅（静默方式，不打扰用户）
+      this.initPushSubscription(currentRole);
     }, 100);
+  }
+
+  /**
+   * 初始化推送订阅
+   * 根据用户角色订阅不同的消息模板
+   */
+  async initPushSubscription(role?: string) {
+    try {
+      if (role === 'store') {
+        // 门店用户：订阅订单更新通知
+        await subscribeOrderUpdates();
+      } else if (role === 'supplier') {
+        // 供应商用户：订阅新订单通知
+        await subscribeNewOrderNotice();
+      }
+    } catch (error) {
+      // 静默失败，不影响用户体验
+      console.log('Push subscription skipped:', error);
+    }
   }
 
   componentDidShow() {}
