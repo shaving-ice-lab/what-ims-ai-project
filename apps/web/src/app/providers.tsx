@@ -1,11 +1,12 @@
 'use client';
 
 import { persistor, store } from '@/store';
-import { ConfigProvider } from 'antd';
+import { setAntdStaticInstance } from '@/utils/antdStatic';
+import { App, ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 
@@ -34,12 +35,25 @@ const theme = {
   },
 };
 
+// 设置 Ant Design 静态方法实例
+function AntdStaticSetup({ children }: { children: React.ReactNode }) {
+  const { message, notification, modal } = App.useApp();
+
+  useEffect(() => {
+    setAntdStaticInstance(message, notification, modal);
+  }, [message, notification, modal]);
+
+  return <>{children}</>;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <ConfigProvider locale={zhCN} theme={theme}>
-          {children}
+          <App>
+            <AntdStaticSetup>{children}</AntdStaticSetup>
+          </App>
         </ConfigProvider>
       </PersistGate>
     </Provider>

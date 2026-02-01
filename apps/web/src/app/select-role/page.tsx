@@ -4,7 +4,7 @@ import { RootState } from '@/store';
 import { selectRole } from '@/store/slices/authSlice';
 import { http } from '@/utils/request';
 import { HomeOutlined, SettingOutlined, ShopOutlined } from '@ant-design/icons';
-import { Button, Card, Col, Row, Typography, message } from 'antd';
+import { App, Button, Card, Col, Row, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -31,6 +31,7 @@ export default function SelectRolePage() {
   const dispatch = useDispatch();
   const { availableRoles } = useSelector((state: RootState) => state.user);
   const [loading, setLoading] = React.useState(false);
+  const { message } = App.useApp();
 
   React.useEffect(() => {
     if (!availableRoles || availableRoles.length <= 1) {

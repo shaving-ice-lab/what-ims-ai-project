@@ -1,12 +1,12 @@
 'use client';
 
 import {
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  SaveOutlined,
-  UploadOutlined,
+    CheckCircleOutlined,
+    ExclamationCircleOutlined,
+    SaveOutlined,
+    UploadOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Card, Form, Input, Space, Tabs, Typography, Upload, message } from 'antd';
+import { Alert, App, Button, Card, Form, Input, Space, Tabs, Typography, Upload } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useState } from 'react';
 import AdminLayout from '../../../../components/layouts/AdminLayout';
@@ -40,6 +40,7 @@ export default function PaymentConfigPage() {
   const [testingLichu, setTestingLichu] = useState(false);
   const [testingWechat, setTestingWechat] = useState(false);
   const [testingAlipay, setTestingAlipay] = useState(false);
+  const { message } = App.useApp();
 
   // 保存利楚扫呗配置
   const handleSaveLichu = async (values: LichuConfig) => {

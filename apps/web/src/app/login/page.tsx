@@ -3,7 +3,7 @@
 import { loginSuccess } from '@/store/slices/authSlice';
 import { http } from '@/utils/request';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
-import { Button, Card, Form, Input, message, Typography } from 'antd';
+import { App, Button, Card, Form, Input, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import React from 'react';
 import { useDispatch } from 'react-redux';
@@ -21,35 +21,41 @@ export default function LoginPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const [loading, setLoading] = React.useState(false);
+  const { message } = App.useApp();
 
   const onFinish = async (values: LoginForm) => {
     setLoading(true);
     try {
-      const res = await http.post('/auth/login', values);
+      const res = await http.post<{
+        accessToken: string;
+        refreshToken: string;
+        user: { id: number; username: string; role: string; name: string };
+        availableRoles?: { role: string; roleId?: number; name: string }[];
+      }>('/auth/login', values);
 
       // 保存登录信息
       dispatch(
         loginSuccess({
-          user: res.data.user,
-          token: res.data.accessToken,
-          refreshToken: res.data.refreshToken,
-          availableRoles: res.data.availableRoles,
+          user: res.user,
+          accessToken: res.accessToken,
+          refreshToken: res.refreshToken,
+          availableRoles: res.availableRoles,
         })
       );
 
       // 保存到localStorage
-      localStorage.setItem('token', res.data.accessToken);
-      localStorage.setItem('refreshToken', res.data.refreshToken);
+      localStorage.setItem('token', res.accessToken);
+      localStorage.setItem('refreshToken', res.refreshToken);
 
       message.success('登录成功');
 
       // 根据角色跳转
-      if (res.data.availableRoles && res.data.availableRoles.length > 1) {
+      if (res.availableRoles && res.availableRoles.length > 1) {
         // 多角色用户，跳转到角色选择页
         router.push('/select-role');
       } else {
         // 单角色用户，直接跳转到对应首页
-        const role = res.data.user.role;
+        const role = res.user.role;
         switch (role) {
           case 'admin':
           case 'sub_admin':
