@@ -49,3 +49,6 @@ account.md
 
 # Logs
 apps/backend/logs/
+
+# Binary files
+*.exe
