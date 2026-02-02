@@ -1,37 +1,50 @@
-'use client';
+"use client";
 
+import { AdminLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  ArrowLeftOutlined,
-  CheckOutlined,
-  CloseOutlined,
-  WarningOutlined,
-} from '@ant-design/icons';
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Descriptions,
-  Form,
-  Image,
-  Input,
-  message,
-  Modal,
-  Row,
-  Space,
-  Spin,
-  Statistic,
-  Table,
-  Tag,
-  Typography,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import AdminLayout from '../../../../components/layouts/AdminLayout';
-
-const { Title, Paragraph, Text } = Typography;
-const { TextArea } = Input;
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { showToast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+    AlertTriangle,
+    ArrowLeft,
+    Check,
+    CheckCircle,
+    X,
+} from "lucide-react";
+import Image from "next/image";
+import { useParams, useRouter } from "next/navigation";
+import * as React from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 interface ProductDetail {
   id: number;
@@ -44,74 +57,78 @@ interface ProductDetail {
   supplierName: string;
   image: string;
   submitTime: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   isNewBrand: boolean;
   description: string;
   packageSpec: string;
 }
 
 interface PriceHistory {
-  key: string;
+  id: string;
   date: string;
   price: number;
   source: string;
 }
 
 interface SimilarProduct {
-  key: string;
+  id: string;
   name: string;
   brand: string;
   price: number;
   supplier: string;
 }
 
+const rejectSchema = z.object({
+  reason: z.string().min(1, "请输入驳回原因"),
+});
+
 export default function ProductAuditDetailPage() {
   const router = useRouter();
   const params = useParams();
   const productId = params.id as string;
-  const [loading, setLoading] = useState(true);
-  const [product, setProduct] = useState<ProductDetail | null>(null);
-  const [rejectVisible, setRejectVisible] = useState(false);
-  const [rejectForm] = Form.useForm();
+  const [loading, setLoading] = React.useState(true);
+  const [product, setProduct] = React.useState<ProductDetail | null>(null);
+  const [rejectOpen, setRejectOpen] = React.useState(false);
 
-  // 模拟价格历史
+  const rejectForm = useForm({
+    resolver: zodResolver(rejectSchema),
+    defaultValues: { reason: "" },
+  });
+
   const priceHistory: PriceHistory[] = [
-    { key: '1', date: '2024-01-29', price: 58.0, source: '当前报价' },
-    { key: '2', date: '2024-01-15', price: 56.0, source: '历史报价' },
-    { key: '3', date: '2024-01-01', price: 55.0, source: '历史报价' },
+    { id: "1", date: "2024-01-29", price: 58.0, source: "当前报价" },
+    { id: "2", date: "2024-01-15", price: 56.0, source: "历史报价" },
+    { id: "3", date: "2024-01-01", price: 55.0, source: "历史报价" },
   ];
 
-  // 模拟同品牌同规格产品
   const similarProducts: SimilarProduct[] = [
-    { key: '1', name: '金龙鱼大豆油', brand: '金龙鱼', price: 56.0, supplier: '粮油供应商A' },
-    { key: '2', name: '金龙鱼大豆油', brand: '金龙鱼', price: 59.0, supplier: '粮油供应商C' },
+    { id: "1", name: "金龙鱼大豆油", brand: "金龙鱼", price: 56.0, supplier: "粮油供应商A" },
+    { id: "2", name: "金龙鱼大豆油", brand: "金龙鱼", price: 59.0, supplier: "粮油供应商C" },
   ];
 
-  // 加载产品数据
-  useEffect(() => {
+  React.useEffect(() => {
     const loadProduct = async () => {
       setLoading(true);
       try {
         await new Promise((resolve) => setTimeout(resolve, 500));
-
         setProduct({
           id: Number(productId),
-          name: '金龙鱼大豆油',
-          brand: '金龙鱼',
-          spec: '5L/桶',
-          unit: '桶',
+          name: "金龙鱼大豆油",
+          brand: "金龙鱼",
+          spec: "5L/桶",
+          unit: "桶",
           price: 58.0,
           supplierId: 2,
-          supplierName: '粮油供应商B',
-          image: 'https://via.placeholder.com/200',
-          submitTime: '2024-01-29 10:30:00',
-          status: 'pending',
+          supplierName: "粮油供应商B",
+          image: "https://via.placeholder.com/200",
+          submitTime: "2024-01-29 10:30:00",
+          status: "pending",
           isNewBrand: false,
-          description: '金龙鱼精炼一级大豆油，适合中餐烹饪',
-          packageSpec: '4桶/箱',
+          description: "金龙鱼精炼一级大豆油，适合中餐烹饪",
+          packageSpec: "4桶/箱",
         });
       } catch {
-        message.error('加载产品数据失败');
+        showToast.error("加载产品数据失败");
       } finally {
         setLoading(false);
       }
@@ -120,68 +137,40 @@ export default function ProductAuditDetailPage() {
     loadProduct();
   }, [productId]);
 
-  // 审核通过
   const handleApprove = () => {
-    setProduct((prev) => (prev ? { ...prev, status: 'approved' } : null));
-    message.success('审核已通过');
+    setProduct((prev) => (prev ? { ...prev, status: "approved" } : null));
+    showToast.success("审核已通过");
   };
 
-  // 审核驳回
-  const handleReject = async (_values: { reason: string }) => {
-    setProduct((prev) => (prev ? { ...prev, status: 'rejected' } : null));
-    message.success('已驳回');
-    setRejectVisible(false);
-    rejectForm.resetFields();
+  const handleReject = () => {
+    setProduct((prev) => (prev ? { ...prev, status: "rejected" } : null));
+    showToast.success("已驳回");
+    setRejectOpen(false);
+    rejectForm.reset();
   };
 
-  // 价格对比列
-  const priceColumns: ColumnsType<PriceHistory> = [
-    { title: '日期', dataIndex: 'date', key: 'date' },
-    {
-      title: '价格',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price: number) => `¥${price.toFixed(2)}`,
-    },
-    { title: '来源', dataIndex: 'source', key: 'source' },
-  ];
-
-  // 同类产品列
-  const similarColumns: ColumnsType<SimilarProduct> = [
-    { title: '产品名称', dataIndex: 'name', key: 'name' },
-    { title: '品牌', dataIndex: 'brand', key: 'brand' },
-    {
-      title: '价格',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price: number) => {
-        const isLowest = price <= Math.min(...similarProducts.map((p) => p.price));
-        return (
-          <span style={{ color: isLowest ? '#52c41a' : undefined }}>
-            ¥{price.toFixed(2)}
-            {isLowest && (
-              <Tag color="green" style={{ marginLeft: 8 }}>
-                最低
-              </Tag>
-            )}
-          </span>
-        );
-      },
-    },
-    { title: '供应商', dataIndex: 'supplier', key: 'supplier' },
-  ];
-
-  // 价格分析
-  const avgPrice = similarProducts.reduce((sum, p) => sum + p.price, 0) / similarProducts.length;
-  const priceDeviation = product ? (((product.price - avgPrice) / avgPrice) * 100).toFixed(1) : 0;
+  const avgPrice =
+    similarProducts.reduce((sum, p) => sum + p.price, 0) / similarProducts.length;
+  const priceDeviation = product
+    ? (((product.price - avgPrice) / avgPrice) * 100).toFixed(1)
+    : "0";
 
   if (loading) {
     return (
       <AdminLayout>
-        <div style={{ textAlign: 'center', padding: '100px 0' }}>
-          <Spin size="large" />
-          <div style={{ marginTop: 16 }}>加载中...</div>
-        </div>
+        <WorkbenchShell
+          badge="审核详情"
+          title="产品审核详情"
+          description={`产品ID: ${productId}`}
+        >
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </WorkbenchShell>
       </AdminLayout>
     );
   }
@@ -189,215 +178,337 @@ export default function ProductAuditDetailPage() {
   if (!product) {
     return (
       <AdminLayout>
-        <div style={{ textAlign: 'center', padding: '100px 0' }}>产品不存在</div>
+        <WorkbenchShell
+          badge="审核详情"
+          title="产品审核详情"
+          description={`产品ID: ${productId}`}
+        >
+          <div className="flex items-center justify-center min-h-[400px]">
+            <p className="text-muted-foreground">产品不存在</p>
+          </div>
+        </WorkbenchShell>
       </AdminLayout>
     );
   }
 
   return (
     <AdminLayout>
-      <div>
-        <Space style={{ marginBottom: 24 }}>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
+      <WorkbenchShell
+        badge="审核详情"
+        title="产品审核详情"
+        description={`产品ID: ${productId}`}
+        actions={
+          <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
             返回列表
           </Button>
-        </Space>
-
-        <Title level={3}>产品审核详情</Title>
-
-        <Row gutter={24}>
-          <Col xs={24} lg={16}>
-            {/* 产品信息 */}
-            <Card title="产品信息" style={{ marginBottom: 24 }}>
-              <Row gutter={24}>
-                <Col span={8}>
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    width={180}
-                    height={180}
-                    style={{ objectFit: 'cover', borderRadius: 8 }}
-                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                  />
-                </Col>
-                <Col span={16}>
-                  <Descriptions column={2} size="small">
-                    <Descriptions.Item label="产品名称" span={2}>
-                      {product.name}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="品牌">
-                      <Space>
-                        {product.brand}
-                        {product.isNewBrand && <Tag color="blue">新品牌</Tag>}
-                      </Space>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="规格">{product.spec}</Descriptions.Item>
-                    <Descriptions.Item label="单位">{product.unit}</Descriptions.Item>
-                    <Descriptions.Item label="包装规格">{product.packageSpec}</Descriptions.Item>
-                    <Descriptions.Item label="报价">
-                      <Text strong style={{ color: '#1890ff', fontSize: 18 }}>
-                        ¥{product.price.toFixed(2)}
-                      </Text>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="供应商">{product.supplierName}</Descriptions.Item>
-                    <Descriptions.Item label="产品描述" span={2}>
-                      {product.description}
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Col>
-              </Row>
+        }
+        sidebar={
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">审核操作</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {product.status === "pending" ? (
+                  <div className="space-y-2">
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handleApprove}
+                    >
+                      <Check className="mr-2 h-4 w-4" />
+                      审核通过
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      size="lg"
+                      onClick={() => setRejectOpen(true)}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      审核驳回
+                    </Button>
+                  </div>
+                ) : (
+                  <Alert
+                    variant={
+                      product.status === "approved" ? "success" : "destructive"
+                    }
+                  >
+                    <AlertDescription>
+                      {product.status === "approved"
+                        ? "审核已通过"
+                        : "审核已驳回"}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
             </Card>
 
-            {/* 品牌信息核实 */}
-            {product.isNewBrand && (
-              <Alert
-                message="新品牌提醒"
-                description="这是一个新品牌，请仔细核实品牌信息的真实性和合规性"
-                type="warning"
-                showIcon
-                icon={<WarningOutlined />}
-                style={{ marginBottom: 24 }}
-              />
-            )}
-
-            {/* 价格合理性检查 */}
-            <Card title="价格合理性检查" style={{ marginBottom: 24 }}>
-              <Row gutter={16} style={{ marginBottom: 24 }}>
-                <Col span={8}>
-                  <Statistic title="当前报价" value={product.price} prefix="¥" precision={2} />
-                </Col>
-                <Col span={8}>
-                  <Statistic title="市场均价" value={avgPrice} prefix="¥" precision={2} />
-                </Col>
-                <Col span={8}>
-                  <Statistic
-                    title="价格偏差"
-                    value={priceDeviation}
-                    suffix="%"
-                    valueStyle={{
-                      color:
-                        Number(priceDeviation) > 10
-                          ? '#ff4d4f'
-                          : Number(priceDeviation) < -10
-                            ? '#52c41a'
-                            : undefined,
-                    }}
-                  />
-                </Col>
-              </Row>
-
-              <Paragraph type="secondary">历史价格对比</Paragraph>
-              <Table
-                dataSource={priceHistory}
-                columns={priceColumns}
-                pagination={false}
-                size="small"
-              />
-
-              <Paragraph type="secondary" style={{ marginTop: 16 }}>
-                同品牌同规格对比
-              </Paragraph>
-              <Table
-                dataSource={similarProducts}
-                columns={similarColumns}
-                pagination={false}
-                size="small"
-              />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">审核检查清单</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="success" className="rounded-full p-1">
+                    <CheckCircle className="h-3 w-3" />
+                  </Badge>
+                  <span className="text-sm">产品信息完整性</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="success" className="rounded-full p-1">
+                    <CheckCircle className="h-3 w-3" />
+                  </Badge>
+                  <span className="text-sm">品牌信息真实性</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={Number(priceDeviation) > 20 ? "error" : "success"}
+                    className="rounded-full p-1"
+                  >
+                    {Number(priceDeviation) > 20 ? (
+                      <AlertTriangle className="h-3 w-3" />
+                    ) : (
+                      <CheckCircle className="h-3 w-3" />
+                    )}
+                  </Badge>
+                  <span className="text-sm">价格合理性</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="success" className="rounded-full p-1">
+                    <CheckCircle className="h-3 w-3" />
+                  </Badge>
+                  <span className="text-sm">图片匹配度</span>
+                </div>
+              </CardContent>
             </Card>
-          </Col>
-
-          <Col xs={24} lg={8}>
-            {/* 审核操作 */}
-            <Card title="审核操作" style={{ marginBottom: 24 }}>
-              {product.status === 'pending' ? (
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Button
-                    type="primary"
-                    icon={<CheckOutlined />}
-                    block
-                    size="large"
-                    onClick={handleApprove}
-                  >
-                    审核通过
-                  </Button>
-                  <Button
-                    danger
-                    icon={<CloseOutlined />}
-                    block
-                    size="large"
-                    onClick={() => setRejectVisible(true)}
-                  >
-                    审核驳回
-                  </Button>
-                </Space>
-              ) : (
-                <Alert
-                  message={product.status === 'approved' ? '审核已通过' : '审核已驳回'}
-                  type={product.status === 'approved' ? 'success' : 'error'}
-                  showIcon
+          </div>
+        }
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">产品信息</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-6">
+              <div className="relative w-[180px] h-[180px] rounded-lg overflow-hidden bg-muted">
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  className="object-cover"
                 />
-              )}
-            </Card>
+              </div>
+              <div className="flex-1 grid grid-cols-2 gap-4 text-sm">
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">产品名称</span>
+                  <p className="font-medium">{product.name}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">品牌</span>
+                  <p className="font-medium flex items-center gap-2">
+                    {product.brand}
+                    {product.isNewBrand && (
+                      <Badge variant="secondary">新品牌</Badge>
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">规格</span>
+                  <p className="font-medium">{product.spec}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">单位</span>
+                  <p className="font-medium">{product.unit}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">包装规格</span>
+                  <p className="font-medium">{product.packageSpec}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">报价</span>
+                  <p className="text-lg font-semibold text-primary">
+                    ¥{product.price.toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">供应商</span>
+                  <p className="font-medium">{product.supplierName}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">产品描述</span>
+                  <p className="font-medium">{product.description}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* 审核检查清单 */}
-            <Card title="审核检查清单" size="small">
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <div>
-                  <Tag color="green">✓</Tag> 产品信息完整性
-                </div>
-                <div>
-                  <Tag color="green">✓</Tag> 品牌信息真实性
-                </div>
-                <div>
-                  <Tag color={Number(priceDeviation) > 20 ? 'red' : 'green'}>
-                    {Number(priceDeviation) > 20 ? '!' : '✓'}
-                  </Tag>{' '}
-                  价格合理性
-                </div>
-                <div>
-                  <Tag color="green">✓</Tag> 图片匹配度
-                </div>
-              </Space>
-            </Card>
-          </Col>
-        </Row>
+        {product.isNewBrand && (
+          <Alert variant="warning">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>新品牌提醒</AlertTitle>
+            <AlertDescription>
+              这是一个新品牌，请仔细核实品牌信息的真实性和合规性
+            </AlertDescription>
+          </Alert>
+        )}
 
-        {/* 驳回弹窗 */}
-        <Modal
-          title="驳回产品"
-          open={rejectVisible}
-          onCancel={() => {
-            setRejectVisible(false);
-            rejectForm.resetFields();
-          }}
-          footer={null}
-        >
-          <Form form={rejectForm} layout="vertical" onFinish={handleReject}>
-            <Form.Item
-              name="reason"
-              label="驳回原因"
-              rules={[{ required: true, message: '请输入驳回原因' }]}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">价格合理性检查</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground mb-1">当前报价</p>
+                <p className="text-2xl font-semibold">
+                  ¥{product.price.toFixed(2)}
+                </p>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground mb-1">市场均价</p>
+                <p className="text-2xl font-semibold">
+                  ¥{avgPrice.toFixed(2)}
+                </p>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground mb-1">价格偏差</p>
+                <p
+                  className={cn(
+                    "text-2xl font-semibold",
+                    Number(priceDeviation) > 10
+                      ? "text-[hsl(var(--error))]"
+                      : Number(priceDeviation) < -10
+                      ? "text-[hsl(var(--success))]"
+                      : ""
+                  )}
+                >
+                  {priceDeviation}%
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">历史价格对比</p>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>日期</TableHead>
+                      <TableHead className="text-right">价格</TableHead>
+                      <TableHead>来源</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {priceHistory.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.date}</TableCell>
+                        <TableCell className="text-right">
+                          ¥{item.price.toFixed(2)}
+                        </TableCell>
+                        <TableCell>{item.source}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">
+                同品牌同规格对比
+              </p>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>产品名称</TableHead>
+                      <TableHead>品牌</TableHead>
+                      <TableHead className="text-right">价格</TableHead>
+                      <TableHead>供应商</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {similarProducts.map((item) => {
+                      const isLowest =
+                        item.price <=
+                        Math.min(...similarProducts.map((p) => p.price));
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.name}</TableCell>
+                          <TableCell>{item.brand}</TableCell>
+                          <TableCell className="text-right">
+                            <span
+                              className={cn(
+                                isLowest && "text-[hsl(var(--success))]"
+                              )}
+                            >
+                              ¥{item.price.toFixed(2)}
+                              {isLowest && (
+                                <Badge variant="success" className="ml-2">
+                                  最低
+                                </Badge>
+                              )}
+                            </span>
+                          </TableCell>
+                          <TableCell>{item.supplier}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </WorkbenchShell>
+
+      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>驳回产品</DialogTitle>
+          </DialogHeader>
+          <Form {...rejectForm}>
+            <form
+              onSubmit={rejectForm.handleSubmit(handleReject)}
+              className="space-y-4"
             >
-              <TextArea rows={4} placeholder="请输入驳回原因" />
-            </Form.Item>
-            <Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit" danger>
+              <FormField
+                control={rejectForm.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>驳回原因</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={4}
+                        placeholder="请输入驳回原因"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-2">
+                <Button type="submit" variant="destructive">
                   确认驳回
                 </Button>
                 <Button
-                  onClick={() => {
-                    setRejectVisible(false);
-                    rejectForm.resetFields();
-                  }}
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRejectOpen(false)}
                 >
                   取消
                 </Button>
-              </Space>
-            </Form.Item>
+              </div>
+            </form>
           </Form>
-        </Modal>
-      </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

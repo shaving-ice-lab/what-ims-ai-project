@@ -1,199 +1,297 @@
-'use client';
+"use client";
 
-import { ClockCircleOutlined, SaveOutlined } from '@ant-design/icons';
+import { SupplierLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
 import {
-  Alert,
-  Button,
-  Card,
-  Checkbox,
-  Divider,
-  Form,
-  InputNumber,
-  message,
-  Radio,
-  Space,
-  Tag,
-  Typography,
-} from 'antd';
-import { useState } from 'react';
+    Alert,
+    AlertDescription,
+    AlertTitle,
+} from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { showToast } from "@/lib/toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Clock, Loader2, Save, XCircle } from "lucide-react";
+import * as React from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
-const { Title, Paragraph, Text } = Typography;
+const deliverySchema = z.object({
+  minOrderAmount: z.number().min(0, "起送价不能为负数"),
+  deliveryDays: z.array(z.string()).min(1, "请至少选择一个配送日"),
+  deliveryMode: z.enum(["self_delivery", "express_delivery"]),
+});
 
-interface DeliverySettings {
-  minOrderAmount: number;
-  deliveryDays: string[];
-  deliveryMode: 'self_delivery' | 'express_delivery';
-}
+type DeliveryFormValues = z.infer<typeof deliverySchema>;
+
+const deliveryDayOptions = [
+  { label: "周一", value: "1" },
+  { label: "周二", value: "2" },
+  { label: "周三", value: "3" },
+  { label: "周四", value: "4" },
+  { label: "周五", value: "5" },
+  { label: "周六", value: "6" },
+  { label: "周日", value: "0" },
+];
+
+const deliveryModeOptions = [
+  {
+    value: "self_delivery",
+    label: "自配送",
+    desc: "供应商自行安排配送，适合本地配送",
+  },
+  {
+    value: "express_delivery",
+    label: "快递配送",
+    desc: "通过快递公司配送，需上传运单号",
+  },
+];
+
+const initialValues: DeliveryFormValues = {
+  minOrderAmount: 100,
+  deliveryDays: ["1", "3", "5"],
+  deliveryMode: "self_delivery",
+};
 
 export default function SupplierDeliveryPage() {
-  const [form] = Form.useForm<DeliverySettings>();
-  const [loading, setLoading] = useState(false);
-  const [auditStatus, setAuditStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>(
-    'approved'
-  );
-  const [rejectReason] = useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [auditStatus, setAuditStatus] = React.useState<
+    "none" | "pending" | "approved" | "rejected"
+  >("approved");
+  const [rejectReason] = React.useState<string | null>(null);
 
-  // 初始值
-  const initialValues: DeliverySettings = {
-    minOrderAmount: 100,
-    deliveryDays: ['1', '3', '5'],
-    deliveryMode: 'self_delivery',
-  };
+  const form = useForm<DeliveryFormValues>({
+    resolver: zodResolver(deliverySchema),
+    defaultValues: initialValues,
+  });
 
-  // 配送日选项
-  const deliveryDayOptions = [
-    { label: '周一', value: '1' },
-    { label: '周二', value: '2' },
-    { label: '周三', value: '3' },
-    { label: '周四', value: '4' },
-    { label: '周五', value: '5' },
-    { label: '周六', value: '6' },
-    { label: '周日', value: '0' },
-  ];
-
-  // 配送模式选项
-  const deliveryModeOptions = [
-    {
-      value: 'self_delivery',
-      label: '自配送',
-      desc: '供应商自行安排配送，适合本地配送',
-    },
-    {
-      value: 'express_delivery',
-      label: '快递配送',
-      desc: '通过快递公司配送，需上传运单号',
-    },
-  ];
-
-  // 提交设置
-  const handleSubmit = async (values: DeliverySettings) => {
+  const onSubmit = async (values: DeliveryFormValues) => {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log('Saving delivery settings:', values);
-      setAuditStatus('pending');
-      message.success('配送设置已提交审核');
+      console.log("Saving delivery settings:", values);
+      setAuditStatus("pending");
+      showToast.success("配送设置已提交审核");
     } catch {
-      message.error('提交失败，请重试');
+      showToast.error("提交失败，请重试");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: 24, maxWidth: 800 }}>
-      <Title level={3}>配送设置</Title>
-      <Paragraph type="secondary">设置您的起送价、配送日和配送模式，修改后需要管理员审核</Paragraph>
+    <SupplierLayout>
+      <WorkbenchShell
+        badge="配送设置"
+        title="配送设置"
+        description="设置您的起送价、配送日和配送模式，修改后需要管理员审核"
+        results={
+          <div className="max-w-2xl space-y-6 animate-fade-in">
+            {/* Audit Status Alerts */}
+            {auditStatus === "pending" && (
+              <Alert>
+                <Clock className="h-4 w-4" />
+                <AlertTitle>配送设置审核中</AlertTitle>
+                <AlertDescription>
+                  您的配送设置变更正在等待管理员审核，审核期间将使用原有设置
+                </AlertDescription>
+              </Alert>
+            )}
 
-      {/* 审核状态提示 */}
-      {auditStatus === 'pending' && (
-        <Alert
-          message="配送设置审核中"
-          description="您的配送设置变更正在等待管理员审核，审核期间将使用原有设置"
-          type="warning"
-          showIcon
-          icon={<ClockCircleOutlined />}
-          style={{ marginBottom: 24 }}
-        />
-      )}
+            {auditStatus === "rejected" && rejectReason && (
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertTitle>配送设置审核未通过</AlertTitle>
+                <AlertDescription>驳回原因：{rejectReason}</AlertDescription>
+              </Alert>
+            )}
 
-      {auditStatus === 'rejected' && rejectReason && (
-        <Alert
-          message="配送设置审核未通过"
-          description={`驳回原因：${rejectReason}`}
-          type="error"
-          showIcon
-          style={{ marginBottom: 24 }}
-        />
-      )}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Min Order Amount */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">起送价设置</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="minOrderAmount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>最低起送价</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">¥</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="w-40"
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
+                              />
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            门店订单金额需达到此金额才能下单
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="text-sm text-muted-foreground">
+                      当前生效起送价：
+                      <span className="font-medium text-foreground ml-1">
+                        ¥{initialValues.minOrderAmount}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
 
-      <Form form={form} layout="vertical" initialValues={initialValues} onFinish={handleSubmit}>
-        {/* 起送价设置 */}
-        <Card title="起送价设置" style={{ marginBottom: 24 }}>
-          <Form.Item
-            name="minOrderAmount"
-            label="最低起送价"
-            rules={[
-              { required: true, message: '请输入起送价' },
-              { type: 'number', min: 0, message: '起送价不能为负数' },
-            ]}
-            extra="门店订单金额需达到此金额才能下单"
-          >
-            <InputNumber
-              min={0}
-              precision={2}
-              addonBefore="¥"
-              style={{ width: 200 }}
-              placeholder="请输入起送价"
-            />
-          </Form.Item>
-          <Text type="secondary">
-            当前生效起送价：<Text strong>¥{initialValues.minOrderAmount}</Text>
-          </Text>
-        </Card>
+                {/* Delivery Days */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">配送日设置</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="deliveryDays"
+                      render={() => (
+                        <FormItem>
+                          <FormLabel>选择配送日</FormLabel>
+                          <div className="flex flex-wrap gap-4 mt-2">
+                            {deliveryDayOptions.map((option) => (
+                              <FormField
+                                key={option.value}
+                                control={form.control}
+                                name="deliveryDays"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem className="flex items-center space-x-2 space-y-0">
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(option.value)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([
+                                                  ...field.value,
+                                                  option.value,
+                                                ])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value) => value !== option.value
+                                                  )
+                                                );
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal cursor-pointer">
+                                        {option.label}
+                                      </FormLabel>
+                                    </FormItem>
+                                  );
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <FormDescription>
+                            门店只能选择您设置的配送日进行下单
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Separator />
+                    <div className="text-sm text-muted-foreground">
+                      当前生效配送日：
+                      {initialValues.deliveryDays.map((d) => {
+                        const day = deliveryDayOptions.find((o) => o.value === d);
+                        return (
+                          <Badge key={d} variant="secondary" className="ml-2">
+                            {day?.label}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
 
-        {/* 配送日设置 */}
-        <Card title="配送日设置" style={{ marginBottom: 24 }}>
-          <Form.Item
-            name="deliveryDays"
-            label="选择配送日"
-            rules={[{ required: true, message: '请至少选择一个配送日' }]}
-            extra="门店只能选择您设置的配送日进行下单"
-          >
-            <Checkbox.Group options={deliveryDayOptions} />
-          </Form.Item>
+                {/* Delivery Mode */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">配送模式设置</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="deliveryMode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>选择配送模式</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              className="mt-2 space-y-3"
+                            >
+                              {deliveryModeOptions.map((option) => (
+                                <div
+                                  key={option.value}
+                                  className="flex items-start space-x-3"
+                                >
+                                  <RadioGroupItem
+                                    value={option.value}
+                                    id={option.value}
+                                  />
+                                  <div className="grid gap-0.5 leading-none">
+                                    <label
+                                      htmlFor={option.value}
+                                      className="text-sm font-medium cursor-pointer"
+                                    >
+                                      {option.label}
+                                    </label>
+                                    <p className="text-sm text-muted-foreground">
+                                      {option.desc}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
 
-          <Divider />
-
-          <Text type="secondary">
-            当前生效配送日：
-            {initialValues.deliveryDays.map((d) => {
-              const day = deliveryDayOptions.find((o) => o.value === d);
-              return (
-                <Tag key={d} color="blue" style={{ marginLeft: 4 }}>
-                  {day?.label}
-                </Tag>
-              );
-            })}
-          </Text>
-        </Card>
-
-        {/* 配送模式设置 */}
-        <Card title="配送模式设置" style={{ marginBottom: 24 }}>
-          <Form.Item
-            name="deliveryMode"
-            label="选择配送模式"
-            rules={[{ required: true, message: '请选择配送模式' }]}
-          >
-            <Radio.Group>
-              <Space direction="vertical">
-                {deliveryModeOptions.map((option) => (
-                  <Radio key={option.value} value={option.value}>
-                    <Space direction="vertical" size={0}>
-                      <Text strong>{option.label}</Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {option.desc}
-                      </Text>
-                    </Space>
-                  </Radio>
-                ))}
-              </Space>
-            </Radio.Group>
-          </Form.Item>
-        </Card>
-
-        <Form.Item>
-          <Button
-            type="primary"
-            htmlType="submit"
-            icon={<SaveOutlined />}
-            loading={loading}
-            size="large"
-          >
-            提交审核
-          </Button>
-        </Form.Item>
-      </Form>
-    </div>
+                <Button type="submit" size="lg" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Save className="mr-2 h-4 w-4" />
+                  提交审核
+                </Button>
+              </form>
+            </Form>
+          </div>
+        }
+      />
+    </SupplierLayout>
   );
 }

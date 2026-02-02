@@ -1,29 +1,26 @@
-'use client';
+"use client";
 
-import { Line } from '@ant-design/charts';
-import { DownloadOutlined, RiseOutlined } from '@ant-design/icons';
+import { LineChart } from "@/components/business/charts";
+import { StatCard, StatGrid } from "@/components/business/stat-card";
+import { AdminLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateRangePicker } from "@/components/ui/date-picker";
 import {
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Row,
-  Space,
-  Statistic,
-  Table,
-  Tabs,
-  Typography,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { Dayjs } from 'dayjs';
-import { useState } from 'react';
-import AdminLayout from '../../../../components/layouts/AdminLayout';
-
-const { Title, Paragraph } = Typography;
-const { RangePicker } = DatePicker;
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DollarSign, Download, Percent, ShoppingCart, TrendingUp } from "lucide-react";
+import * as React from "react";
+import type { DateRange } from "react-day-picker";
 
 interface StoreStatItem {
-  key: string;
   id: number;
   name: string;
   orderCount: number;
@@ -33,7 +30,6 @@ interface StoreStatItem {
 }
 
 interface SupplierStatItem {
-  key: string;
   id: number;
   name: string;
   orderCount: number;
@@ -43,7 +39,6 @@ interface SupplierStatItem {
 }
 
 interface MaterialStatItem {
-  key: string;
   id: number;
   name: string;
   brand: string;
@@ -53,162 +48,38 @@ interface MaterialStatItem {
 }
 
 export default function MarkupStatisticsPage() {
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
 
-  // 模拟趋势数据
+  // Generate trend data
   const trendData = Array.from({ length: 30 }, (_, i) => ({
-    date: `2024-01-${String(i + 1).padStart(2, '0')}`,
-    income: Math.floor(Math.random() * 5000) + 1000,
+    name: `01-${String(i + 1).padStart(2, "0")}`,
+    收入: Math.floor(Math.random() * 5000) + 1000,
   }));
 
-  // 模拟门店统计数据
   const storeData: StoreStatItem[] = [
-    {
-      key: '1',
-      id: 1,
-      name: '门店A - 朝阳店',
-      orderCount: 156,
-      orderAmount: 45680,
-      markupIncome: 1580,
-      avgMarkupRate: 3.46,
-    },
-    {
-      key: '2',
-      id: 2,
-      name: '门店B - 海淀店',
-      orderCount: 89,
-      orderAmount: 28900,
-      markupIncome: 960,
-      avgMarkupRate: 3.32,
-    },
-    {
-      key: '3',
-      id: 3,
-      name: '门店C - 西城店',
-      orderCount: 124,
-      orderAmount: 38500,
-      markupIncome: 1290,
-      avgMarkupRate: 3.35,
-    },
-    {
-      key: '4',
-      id: 4,
-      name: '门店D - 东城店',
-      orderCount: 67,
-      orderAmount: 21300,
-      markupIncome: 720,
-      avgMarkupRate: 3.38,
-    },
-    {
-      key: '5',
-      id: 5,
-      name: '门店E - 丰台店',
-      orderCount: 45,
-      orderAmount: 15600,
-      markupIncome: 480,
-      avgMarkupRate: 3.08,
-    },
+    { id: 1, name: "门店A - 朝阳店", orderCount: 156, orderAmount: 45680, markupIncome: 1580, avgMarkupRate: 3.46 },
+    { id: 2, name: "门店B - 海淀店", orderCount: 89, orderAmount: 28900, markupIncome: 960, avgMarkupRate: 3.32 },
+    { id: 3, name: "门店C - 西城店", orderCount: 124, orderAmount: 38500, markupIncome: 1290, avgMarkupRate: 3.35 },
+    { id: 4, name: "门店D - 东城店", orderCount: 67, orderAmount: 21300, markupIncome: 720, avgMarkupRate: 3.38 },
+    { id: 5, name: "门店E - 丰台店", orderCount: 45, orderAmount: 15600, markupIncome: 480, avgMarkupRate: 3.08 },
   ];
 
-  // 模拟供应商统计数据
   const supplierData: SupplierStatItem[] = [
-    {
-      key: '1',
-      id: 1,
-      name: '生鲜供应商A',
-      orderCount: 234,
-      orderAmount: 68900,
-      markupIncome: 2380,
-      avgMarkupRate: 3.45,
-    },
-    {
-      key: '2',
-      id: 2,
-      name: '粮油供应商B',
-      orderCount: 156,
-      orderAmount: 45600,
-      markupIncome: 1520,
-      avgMarkupRate: 3.33,
-    },
-    {
-      key: '3',
-      id: 3,
-      name: '调味品供应商C',
-      orderCount: 89,
-      orderAmount: 23400,
-      markupIncome: 780,
-      avgMarkupRate: 3.33,
-    },
-    {
-      key: '4',
-      id: 4,
-      name: '冷冻食品供应商D',
-      orderCount: 67,
-      orderAmount: 19800,
-      markupIncome: 660,
-      avgMarkupRate: 3.33,
-    },
-    {
-      key: '5',
-      id: 5,
-      name: '饮料供应商E',
-      orderCount: 45,
-      orderAmount: 12300,
-      markupIncome: 410,
-      avgMarkupRate: 3.33,
-    },
+    { id: 1, name: "生鲜供应商A", orderCount: 234, orderAmount: 68900, markupIncome: 2380, avgMarkupRate: 3.45 },
+    { id: 2, name: "粮油供应商B", orderCount: 156, orderAmount: 45600, markupIncome: 1520, avgMarkupRate: 3.33 },
+    { id: 3, name: "调味品供应商C", orderCount: 89, orderAmount: 23400, markupIncome: 780, avgMarkupRate: 3.33 },
+    { id: 4, name: "冷冻食品供应商D", orderCount: 67, orderAmount: 19800, markupIncome: 660, avgMarkupRate: 3.33 },
+    { id: 5, name: "饮料供应商E", orderCount: 45, orderAmount: 12300, markupIncome: 410, avgMarkupRate: 3.33 },
   ];
 
-  // 模拟商品统计数据
   const materialData: MaterialStatItem[] = [
-    {
-      key: '1',
-      id: 101,
-      name: '金龙鱼大豆油5L',
-      brand: '金龙鱼',
-      salesCount: 156,
-      salesAmount: 9048,
-      markupIncome: 312,
-    },
-    {
-      key: '2',
-      id: 102,
-      name: '福临门花生油5L',
-      brand: '福临门',
-      salesCount: 89,
-      salesAmount: 6052,
-      markupIncome: 178,
-    },
-    {
-      key: '3',
-      id: 103,
-      name: '海天酱油500ml',
-      brand: '海天',
-      salesCount: 234,
-      salesAmount: 2925,
-      markupIncome: 117,
-    },
-    {
-      key: '4',
-      id: 104,
-      name: '太太乐鸡精200g',
-      brand: '太太乐',
-      salesCount: 178,
-      salesAmount: 1566,
-      markupIncome: 89,
-    },
-    {
-      key: '5',
-      id: 105,
-      name: '中粮大米10kg',
-      brand: '中粮',
-      salesCount: 67,
-      salesAmount: 3015,
-      markupIncome: 134,
-    },
+    { id: 101, name: "金龙鱼大豆油5L", brand: "金龙鱼", salesCount: 156, salesAmount: 9048, markupIncome: 312 },
+    { id: 102, name: "福临门花生油5L", brand: "福临门", salesCount: 89, salesAmount: 6052, markupIncome: 178 },
+    { id: 103, name: "海天酱油500ml", brand: "海天", salesCount: 234, salesAmount: 2925, markupIncome: 117 },
+    { id: 104, name: "太太乐鸡精200g", brand: "太太乐", salesCount: 178, salesAmount: 1566, markupIncome: 89 },
+    { id: 105, name: "中粮大米10kg", brand: "中粮", salesCount: 67, salesAmount: 3015, markupIncome: 134 },
   ];
 
-  // 统计汇总
   const totalStats = {
     totalIncome: 5750,
     totalOrders: 481,
@@ -216,209 +87,203 @@ export default function MarkupStatisticsPage() {
     growthRate: 12.5,
   };
 
-  // 折线图配置
-  const lineConfig = {
-    data: trendData,
-    xField: 'date',
-    yField: 'income',
-    smooth: true,
-    height: 300,
-    yAxis: {
-      label: {
-        formatter: (v: string) => `¥${v}`,
-      },
-    },
-    tooltip: {
-      formatter: (datum: { income: number }) => ({
-        name: '加价收入',
-        value: `¥${datum.income.toLocaleString()}`,
-      }),
-    },
-    color: '#52c41a',
-  };
-
-  // 门店表格列
-  const storeColumns: ColumnsType<StoreStatItem> = [
-    { title: '门店名称', dataIndex: 'name', key: 'name' },
-    { title: '订单数', dataIndex: 'orderCount', key: 'orderCount' },
-    {
-      title: '订单金额',
-      dataIndex: 'orderAmount',
-      key: 'orderAmount',
-      render: (v: number) => `¥${v.toLocaleString()}`,
-    },
-    {
-      title: '加价收入',
-      dataIndex: 'markupIncome',
-      key: 'markupIncome',
-      render: (v: number) => <span style={{ color: '#52c41a' }}>¥{v.toLocaleString()}</span>,
-      sorter: (a, b) => a.markupIncome - b.markupIncome,
-    },
-    {
-      title: '平均加价率',
-      dataIndex: 'avgMarkupRate',
-      key: 'avgMarkupRate',
-      render: (v: number) => `${v.toFixed(2)}%`,
-    },
-  ];
-
-  // 供应商表格列
-  const supplierColumns: ColumnsType<SupplierStatItem> = [
-    { title: '供应商名称', dataIndex: 'name', key: 'name' },
-    { title: '订单数', dataIndex: 'orderCount', key: 'orderCount' },
-    {
-      title: '订单金额',
-      dataIndex: 'orderAmount',
-      key: 'orderAmount',
-      render: (v: number) => `¥${v.toLocaleString()}`,
-    },
-    {
-      title: '加价收入',
-      dataIndex: 'markupIncome',
-      key: 'markupIncome',
-      render: (v: number) => <span style={{ color: '#52c41a' }}>¥{v.toLocaleString()}</span>,
-      sorter: (a, b) => a.markupIncome - b.markupIncome,
-    },
-    {
-      title: '平均加价率',
-      dataIndex: 'avgMarkupRate',
-      key: 'avgMarkupRate',
-      render: (v: number) => `${v.toFixed(2)}%`,
-    },
-  ];
-
-  // 商品表格列
-  const materialColumns: ColumnsType<MaterialStatItem> = [
-    { title: '商品名称', dataIndex: 'name', key: 'name' },
-    { title: '品牌', dataIndex: 'brand', key: 'brand' },
-    { title: '销量', dataIndex: 'salesCount', key: 'salesCount' },
-    {
-      title: '销售额',
-      dataIndex: 'salesAmount',
-      key: 'salesAmount',
-      render: (v: number) => `¥${v.toLocaleString()}`,
-    },
-    {
-      title: '加价收入',
-      dataIndex: 'markupIncome',
-      key: 'markupIncome',
-      render: (v: number) => <span style={{ color: '#52c41a' }}>¥{v.toLocaleString()}</span>,
-      sorter: (a, b) => a.markupIncome - b.markupIncome,
-    },
-  ];
-
-  // 导出报表
-  const handleExport = () => {
-    // 实际应调用API导出
-    console.log('Exporting report...');
-  };
-
-  const tabItems = [
-    {
-      key: 'store',
-      label: '按门店',
-      children: (
-        <Table dataSource={storeData} columns={storeColumns} pagination={false} size="small" />
-      ),
-    },
-    {
-      key: 'supplier',
-      label: '按供应商',
-      children: (
-        <Table
-          dataSource={supplierData}
-          columns={supplierColumns}
-          pagination={false}
-          size="small"
-        />
-      ),
-    },
-    {
-      key: 'material',
-      label: '按商品',
-      children: (
-        <Table
-          dataSource={materialData}
-          columns={materialColumns}
-          pagination={false}
-          size="small"
-        />
-      ),
-    },
-  ];
-
   return (
     <AdminLayout>
-      <div>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-          <Col>
-            <Title level={3} style={{ margin: 0 }}>
-              加价收入统计
-            </Title>
-            <Paragraph type="secondary" style={{ margin: 0 }}>
-              查看平台加价收入的详细统计数据
-            </Paragraph>
-          </Col>
-          <Col>
-            <Space>
-              <RangePicker value={dateRange} onChange={(dates) => setDateRange(dates)} />
-              <Button icon={<DownloadOutlined />} onClick={handleExport}>
-                导出报表
-              </Button>
-            </Space>
-          </Col>
-        </Row>
+      <WorkbenchShell
+        badge="加价统计"
+        title="加价收入统计"
+        description="查看平台加价收入的详细统计数据"
+        actions={
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />
+            导出报表
+          </Button>
+        }
+        toolbar={
+          <div className="flex items-center gap-3">
+            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+            <Button variant="outline" size="sm">更新统计</Button>
+          </div>
+        }
+        sidebar={
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">统计概览</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">加价收入</span>
+                <span className="font-semibold text-[hsl(var(--success))]">
+                  ¥{totalStats.totalIncome.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">订单数</span>
+                <span className="font-semibold">{totalStats.totalOrders}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">平均加价率</span>
+                <span className="font-semibold">{totalStats.avgMarkupRate.toFixed(2)}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">环比增长</span>
+                <span className="font-semibold text-[hsl(var(--success))]">
+                  {totalStats.growthRate}%
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        }
+        results={
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">分维度统计</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="store">
+                <TabsList>
+                  <TabsTrigger value="store">按门店</TabsTrigger>
+                  <TabsTrigger value="supplier">按供应商</TabsTrigger>
+                  <TabsTrigger value="material">按商品</TabsTrigger>
+                </TabsList>
+                <TabsContent value="store" className="mt-4">
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>门店名称</TableHead>
+                          <TableHead className="text-right">订单数</TableHead>
+                          <TableHead className="text-right">订单金额</TableHead>
+                          <TableHead className="text-right">加价收入</TableHead>
+                          <TableHead className="text-right">平均加价率</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {storeData.map((store) => (
+                          <TableRow key={store.id}>
+                            <TableCell className="font-medium">{store.name}</TableCell>
+                            <TableCell className="text-right">{store.orderCount}</TableCell>
+                            <TableCell className="text-right">
+                              ¥{store.orderAmount.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right text-[hsl(var(--success))]">
+                              ¥{store.markupIncome.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {store.avgMarkupRate.toFixed(2)}%
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+                <TabsContent value="supplier" className="mt-4">
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>供应商名称</TableHead>
+                          <TableHead className="text-right">订单数</TableHead>
+                          <TableHead className="text-right">订单金额</TableHead>
+                          <TableHead className="text-right">加价收入</TableHead>
+                          <TableHead className="text-right">平均加价率</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {supplierData.map((supplier) => (
+                          <TableRow key={supplier.id}>
+                            <TableCell className="font-medium">{supplier.name}</TableCell>
+                            <TableCell className="text-right">{supplier.orderCount}</TableCell>
+                            <TableCell className="text-right">
+                              ¥{supplier.orderAmount.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right text-[hsl(var(--success))]">
+                              ¥{supplier.markupIncome.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {supplier.avgMarkupRate.toFixed(2)}%
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+                <TabsContent value="material" className="mt-4">
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>商品名称</TableHead>
+                          <TableHead>品牌</TableHead>
+                          <TableHead className="text-right">销量</TableHead>
+                          <TableHead className="text-right">销售额</TableHead>
+                          <TableHead className="text-right">加价收入</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {materialData.map((material) => (
+                          <TableRow key={material.id}>
+                            <TableCell className="font-medium">{material.name}</TableCell>
+                            <TableCell>{material.brand}</TableCell>
+                            <TableCell className="text-right">{material.salesCount}</TableCell>
+                            <TableCell className="text-right">
+                              ¥{material.salesAmount.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right text-[hsl(var(--success))]">
+                              ¥{material.markupIncome.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        }
+      >
+        <StatGrid columns={4}>
+          <StatCard
+            title="本期加价收入"
+            value={`¥${totalStats.totalIncome.toLocaleString()}`}
+            icon={DollarSign}
+            valueClassName="text-[hsl(var(--success))]"
+          />
+          <StatCard
+            title="订单数"
+            value={`${totalStats.totalOrders}单`}
+            icon={ShoppingCart}
+          />
+          <StatCard
+            title="平均加价率"
+            value={`${totalStats.avgMarkupRate.toFixed(2)}%`}
+            icon={Percent}
+          />
+          <StatCard
+            title="环比增长"
+            value={`${totalStats.growthRate}%`}
+            icon={TrendingUp}
+            valueClassName="text-[hsl(var(--success))]"
+          />
+        </StatGrid>
 
-        {/* 统计汇总 */}
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="本期加价收入"
-                value={totalStats.totalIncome}
-                prefix="¥"
-                valueStyle={{ color: '#52c41a' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic title="订单数" value={totalStats.totalOrders} suffix="单" />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="平均加价率"
-                value={totalStats.avgMarkupRate}
-                suffix="%"
-                precision={2}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="环比增长"
-                value={totalStats.growthRate}
-                suffix="%"
-                valueStyle={{ color: '#52c41a' }}
-                prefix={<RiseOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        {/* 趋势图 */}
-        <Card title="加价收入趋势（近30天）" style={{ marginBottom: 24 }}>
-          <Line {...lineConfig} />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">加价收入趋势（近30天）</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LineChart
+              data={trendData}
+              xKey="name"
+              yKeys={[{ key: "收入", name: "收入", color: "hsl(var(--success))" }]}
+              height={300}
+            />
+          </CardContent>
         </Card>
-
-        {/* 分维度统计 */}
-        <Card title="分维度统计">
-          <Tabs items={tabItems} />
-        </Card>
-      </div>
+      </WorkbenchShell>
     </AdminLayout>
   );
 }

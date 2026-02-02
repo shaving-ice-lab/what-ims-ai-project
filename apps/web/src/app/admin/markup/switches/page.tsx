@@ -1,36 +1,46 @@
-'use client';
+"use client";
 
+import { StatCard, StatGrid } from "@/components/business/stat-card";
+import { AdminLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  AppstoreOutlined,
-  DollarOutlined,
-  HomeOutlined,
-  InfoCircleOutlined,
-  ShopOutlined,
-} from '@ant-design/icons';
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import {
-  Button,
-  Card,
-  Col,
-  Row,
-  Space,
-  Statistic,
-  Switch,
-  Table,
-  Tag,
-  Tooltip,
-  Tree,
-  Typography,
-  message,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { DataNode } from 'antd/es/tree';
-import React, { useState } from 'react';
-import AdminLayout from '../../../../components/layouts/AdminLayout';
-
-const { Title, Text, Paragraph } = Typography;
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { showToast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
+import {
+    Building2,
+    Calendar,
+    ChevronRight,
+    DollarSign,
+    Info,
+    Layers,
+    Percent,
+    Store,
+} from "lucide-react";
+import * as React from "react";
 
 interface SupplierSwitchItem {
-  key: string;
   id: number;
   name: string;
   enabled: boolean;
@@ -39,7 +49,6 @@ interface SupplierSwitchItem {
 }
 
 interface StoreSwitchItem {
-  key: string;
   id: number;
   name: string;
   enabled: boolean;
@@ -47,367 +56,399 @@ interface StoreSwitchItem {
   markupIncome: number;
 }
 
+interface CategoryItem {
+  id: string;
+  name: string;
+  enabled: boolean;
+  children?: CategoryItem[];
+}
+
 export default function MarkupSwitchesPage() {
-  // 全局总开关状态
-  const [globalEnabled, setGlobalEnabled] = useState(true);
+  const [globalEnabled, setGlobalEnabled] = React.useState(true);
 
-  // 供应商开关数据
-  const [supplierData, setSupplierData] = useState<SupplierSwitchItem[]>([
-    { key: '1', id: 1, name: '生鲜供应商A', enabled: true, markupIncome: 12580, orderCount: 156 },
-    { key: '2', id: 2, name: '粮油供应商B', enabled: true, markupIncome: 8960, orderCount: 89 },
-    { key: '3', id: 3, name: '调味品供应商C', enabled: false, markupIncome: 0, orderCount: 45 },
-    { key: '4', id: 4, name: '冷冻食品供应商D', enabled: true, markupIncome: 5670, orderCount: 67 },
-    { key: '5', id: 5, name: '饮料供应商E', enabled: true, markupIncome: 3420, orderCount: 34 },
+  const [supplierData, setSupplierData] = React.useState<SupplierSwitchItem[]>([
+    { id: 1, name: "生鲜供应商A", enabled: true, markupIncome: 12580, orderCount: 156 },
+    { id: 2, name: "粮油供应商B", enabled: true, markupIncome: 8960, orderCount: 89 },
+    { id: 3, name: "调味品供应商C", enabled: false, markupIncome: 0, orderCount: 45 },
+    { id: 4, name: "冷冻食品供应商D", enabled: true, markupIncome: 5670, orderCount: 67 },
+    { id: 5, name: "饮料供应商E", enabled: true, markupIncome: 3420, orderCount: 34 },
   ]);
 
-  // 门店开关数据
-  const [storeData, setStoreData] = useState<StoreSwitchItem[]>([
+  const [storeData, setStoreData] = React.useState<StoreSwitchItem[]>([
+    { id: 1, name: "门店A - 朝阳店", enabled: true, isNewStore: false, markupIncome: 4580 },
+    { id: 2, name: "门店B - 海淀店", enabled: true, isNewStore: true, markupIncome: 0 },
+    { id: 3, name: "门店C - 西城店", enabled: true, isNewStore: false, markupIncome: 3260 },
+    { id: 4, name: "门店D - 东城店", enabled: false, isNewStore: false, markupIncome: 0 },
+    { id: 5, name: "门店E - 丰台店", enabled: true, isNewStore: true, markupIncome: 0 },
+  ]);
+
+  const [categoryData, setCategoryData] = React.useState<CategoryItem[]>([
     {
-      key: '1',
-      id: 1,
-      name: '门店A - 朝阳店',
+      id: "cat-1",
+      name: "生鲜类",
       enabled: true,
-      isNewStore: false,
-      markupIncome: 4580,
+      children: [
+        { id: "cat-1-1", name: "蔬菜", enabled: true },
+        { id: "cat-1-2", name: "水果", enabled: true },
+        { id: "cat-1-3", name: "肉禽蛋", enabled: true },
+      ],
     },
-    { key: '2', id: 2, name: '门店B - 海淀店', enabled: true, isNewStore: true, markupIncome: 0 },
     {
-      key: '3',
-      id: 3,
-      name: '门店C - 西城店',
+      id: "cat-2",
+      name: "粮油调味",
       enabled: true,
-      isNewStore: false,
-      markupIncome: 3260,
-    },
-    { key: '4', id: 4, name: '门店D - 东城店', enabled: false, isNewStore: false, markupIncome: 0 },
-    { key: '5', id: 5, name: '门店E - 丰台店', enabled: true, isNewStore: true, markupIncome: 0 },
-  ]);
-
-  // 分类开关数据
-  const [categoryTreeData] = useState<DataNode[]>([
-    {
-      title: '生鲜类',
-      key: 'cat-1',
       children: [
-        { title: '蔬菜', key: 'cat-1-1' },
-        { title: '水果', key: 'cat-1-2' },
-        { title: '肉禽蛋', key: 'cat-1-3' },
+        { id: "cat-2-1", name: "米面", enabled: true },
+        { id: "cat-2-2", name: "食用油", enabled: true },
+        { id: "cat-2-3", name: "调味品 (低毛利)", enabled: false },
       ],
     },
     {
-      title: '粮油调味',
-      key: 'cat-2',
+      id: "cat-3",
+      name: "饮料酒水",
+      enabled: true,
       children: [
-        { title: '米面', key: 'cat-2-1' },
-        { title: '食用油', key: 'cat-2-2' },
-        { title: '调味品 (低毛利)', key: 'cat-2-3' },
-      ],
-    },
-    {
-      title: '饮料酒水',
-      key: 'cat-3',
-      children: [
-        { title: '饮料', key: 'cat-3-1' },
-        { title: '酒水', key: 'cat-3-2' },
+        { id: "cat-3-1", name: "饮料", enabled: true },
+        { id: "cat-3-2", name: "酒水", enabled: true },
       ],
     },
   ]);
 
-  const [checkedCategoryKeys, setCheckedCategoryKeys] = useState<React.Key[]>([
-    'cat-1',
-    'cat-1-1',
-    'cat-1-2',
-    'cat-1-3',
-    'cat-2',
-    'cat-2-1',
-    'cat-2-2',
-    'cat-3',
-    'cat-3-1',
-    'cat-3-2',
-  ]);
-
-  // 统计数据
   const statsData = {
     todayIncome: 15680,
     monthIncome: 368900,
     avgMarkupRate: 3.5,
   };
 
-  // 全局开关切换
   const handleGlobalSwitch = (checked: boolean) => {
     setGlobalEnabled(checked);
-    message.success(`全局加价已${checked ? '开启' : '关闭'}`);
+    showToast.success(`全局加价已${checked ? "开启" : "关闭"}`);
   };
 
-  // 供应商开关切换
   const handleSupplierSwitch = (id: number, checked: boolean) => {
     setSupplierData((prev) =>
       prev.map((item) => (item.id === id ? { ...item, enabled: checked } : item))
     );
-    message.success(`供应商加价开关已${checked ? '开启' : '关闭'}`);
+    showToast.success(`供应商加价开关已${checked ? "开启" : "关闭"}`);
   };
 
-  // 门店开关切换
   const handleStoreSwitch = (id: number, checked: boolean) => {
     setStoreData((prev) =>
       prev.map((item) => (item.id === id ? { ...item, enabled: checked } : item))
     );
-    message.success(`门店加价开关已${checked ? '开启' : '关闭'}`);
+    showToast.success(`门店加价开关已${checked ? "开启" : "关闭"}`);
   };
 
-  // 批量操作
   const handleBatchSupplierSwitch = (enabled: boolean) => {
     setSupplierData((prev) => prev.map((item) => ({ ...item, enabled })));
-    message.success(`已批量${enabled ? '开启' : '关闭'}所有供应商加价`);
+    showToast.success(`已批量${enabled ? "开启" : "关闭"}所有供应商加价`);
   };
 
   const handleBatchStoreSwitch = (enabled: boolean) => {
     setStoreData((prev) => prev.map((item) => ({ ...item, enabled })));
-    message.success(`已批量${enabled ? '开启' : '关闭'}所有门店加价`);
+    showToast.success(`已批量${enabled ? "开启" : "关闭"}所有门店加价`);
   };
 
-  // 供应商表格列
-  const supplierColumns: ColumnsType<SupplierSwitchItem> = [
-    {
-      title: '供应商名称',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: '加价开关',
-      dataIndex: 'enabled',
-      key: 'enabled',
-      render: (enabled: boolean, record) => (
-        <Switch
-          checked={enabled}
-          onChange={(checked) => handleSupplierSwitch(record.id, checked)}
-          disabled={!globalEnabled}
-        />
-      ),
-    },
-    {
-      title: '本月加价收入',
-      dataIndex: 'markupIncome',
-      key: 'markupIncome',
-      render: (value: number) => (
-        <span style={{ color: value > 0 ? '#52c41a' : '#999' }}>¥{value.toLocaleString()}</span>
-      ),
-    },
-    {
-      title: '订单数',
-      dataIndex: 'orderCount',
-      key: 'orderCount',
-    },
-  ];
-
-  // 门店表格列
-  const storeColumns: ColumnsType<StoreSwitchItem> = [
-    {
-      title: '门店名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (name: string, record) => (
-        <Space>
-          {name}
-          {record.isNewStore && <Tag color="blue">新店扶持</Tag>}
-        </Space>
-      ),
-    },
-    {
-      title: '加价开关',
-      dataIndex: 'enabled',
-      key: 'enabled',
-      render: (enabled: boolean, record) => (
-        <Switch
-          checked={enabled}
-          onChange={(checked) => handleStoreSwitch(record.id, checked)}
-          disabled={!globalEnabled || record.isNewStore}
-        />
-      ),
-    },
-    {
-      title: '本月加价收入',
-      dataIndex: 'markupIncome',
-      key: 'markupIncome',
-      render: (value: number, record) => (
-        <span style={{ color: record.isNewStore ? '#999' : value > 0 ? '#52c41a' : '#999' }}>
-          {record.isNewStore ? '免加价' : `¥${value.toLocaleString()}`}
-        </span>
-      ),
-    },
-  ];
+  const handleCategoryToggle = (categoryId: string, checked: boolean) => {
+    setCategoryData((prev) =>
+      prev.map((cat) => {
+        if (cat.id === categoryId) {
+          return {
+            ...cat,
+            enabled: checked,
+            children: cat.children?.map((c) => ({ ...c, enabled: checked })),
+          };
+        }
+        if (cat.children) {
+          return {
+            ...cat,
+            children: cat.children.map((c) =>
+              c.id === categoryId ? { ...c, enabled: checked } : c
+            ),
+          };
+        }
+        return cat;
+      })
+    );
+  };
 
   return (
     <AdminLayout>
-      <div>
-        <Title level={3}>加价开关管理</Title>
-        <Paragraph type="secondary">
-          管理平台加价功能的开关状态，可按供应商、门店、分类维度控制加价是否生效
-        </Paragraph>
-
-        {/* 加价收入统计概览 */}
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={8}>
+      <WorkbenchShell
+        badge="加价开关"
+        title="加价开关管理"
+        description="按供应商、门店、分类维度控制加价是否生效"
+        sidebar={
+          <>
             <Card>
-              <Statistic
-                title="今日加价收入"
-                value={statsData.todayIncome}
-                prefix="¥"
-                valueStyle={{ color: '#52c41a' }}
-              />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">全局开关</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <Switch checked={globalEnabled} onCheckedChange={handleGlobalSwitch} />
+                  <span
+                    className={cn(
+                      "text-sm",
+                      globalEnabled ? "text-[hsl(var(--success))]" : "text-muted-foreground"
+                    )}
+                  >
+                    {globalEnabled ? "加价功能已全局开启" : "加价功能已全局关闭"}
+                  </span>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      关闭全局开关后，所有加价规则将暂停生效
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </CardContent>
             </Card>
-          </Col>
-          <Col xs={24} sm={8}>
             <Card>
-              <Statistic
-                title="本月加价收入"
-                value={statsData.monthIncome}
-                prefix="¥"
-                valueStyle={{ color: '#1890ff' }}
-              />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">收入概览</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">今日加价收入</span>
+                  <span className="font-semibold text-[hsl(var(--success))]">
+                    ¥{statsData.todayIncome.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">本月加价收入</span>
+                  <span className="font-semibold">¥{statsData.monthIncome.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">平均加价率</span>
+                  <span className="font-semibold">{statsData.avgMarkupRate}%</span>
+                </div>
+              </CardContent>
             </Card>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Card>
-              <Statistic
-                title="平均加价率"
-                value={statsData.avgMarkupRate}
-                suffix="%"
-                valueStyle={{ color: '#fa8c16' }}
-              />
-            </Card>
-          </Col>
-        </Row>
+          </>
+        }
+      >
+        <StatGrid columns={3}>
+          <StatCard
+            title="今日加价收入"
+            value={`¥${statsData.todayIncome.toLocaleString()}`}
+            icon={DollarSign}
+            valueClassName="text-[hsl(var(--success))]"
+          />
+          <StatCard
+            title="本月加价收入"
+            value={`¥${statsData.monthIncome.toLocaleString()}`}
+            icon={Calendar}
+            valueClassName="text-primary"
+          />
+          <StatCard
+            title="平均加价率"
+            value={`${statsData.avgMarkupRate}%`}
+            icon={Percent}
+            valueClassName="text-[hsl(var(--warning))]"
+          />
+        </StatGrid>
 
-        {/* 全局总开关 */}
-        <Card
-          title={
-            <Space>
-              <DollarOutlined />
-              全局加价总开关
-            </Space>
-          }
-          style={{ marginBottom: 24 }}
-        >
-          <Row align="middle" gutter={16}>
-            <Col>
-              <Switch
-                checked={globalEnabled}
-                onChange={handleGlobalSwitch}
-                checkedChildren="开启"
-                unCheckedChildren="关闭"
-              />
-            </Col>
-            <Col>
-              <Text type={globalEnabled ? 'success' : 'secondary'}>
-                {globalEnabled ? '加价功能已全局开启' : '加价功能已全局关闭'}
-              </Text>
-            </Col>
-            <Col>
-              <Tooltip title="关闭全局开关后，所有加价规则将暂停生效">
-                <InfoCircleOutlined style={{ color: '#999' }} />
-              </Tooltip>
-            </Col>
-          </Row>
-        </Card>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                供应商级开关
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBatchSupplierSwitch(true)}
+                >
+                  全部开启
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBatchSupplierSwitch(false)}
+                >
+                  全部关闭
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>供应商名称</TableHead>
+                    <TableHead className="text-center">加价开关</TableHead>
+                    <TableHead className="text-right">本月收入</TableHead>
+                    <TableHead className="text-right">订单数</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {supplierData.map((supplier) => (
+                    <TableRow key={supplier.id}>
+                      <TableCell className="font-medium">{supplier.name}</TableCell>
+                      <TableCell className="text-center">
+                        <Switch
+                          checked={supplier.enabled}
+                          onCheckedChange={(checked) =>
+                            handleSupplierSwitch(supplier.id, checked)
+                          }
+                          disabled={!globalEnabled}
+                        />
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-right",
+                          supplier.markupIncome > 0
+                            ? "text-[hsl(var(--success))]"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        ¥{supplier.markupIncome.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right">{supplier.orderCount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
-        <Row gutter={16}>
-          {/* 供应商级开关 */}
-          <Col xs={24} lg={12}>
-            <Card
-              title={
-                <Space>
-                  <ShopOutlined />
-                  供应商级开关
-                </Space>
-              }
-              extra={
-                <Space>
-                  <Button size="small" onClick={() => handleBatchSupplierSwitch(true)}>
-                    全部开启
-                  </Button>
-                  <Button size="small" onClick={() => handleBatchSupplierSwitch(false)}>
-                    全部关闭
-                  </Button>
-                </Space>
-              }
-              style={{ marginBottom: 24 }}
-            >
-              <Table
-                dataSource={supplierData}
-                columns={supplierColumns}
-                pagination={false}
-                size="small"
-              />
-            </Card>
-          </Col>
+          <Card>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Store className="h-4 w-4" />
+                门店级开关
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBatchStoreSwitch(true)}
+                >
+                  全部开启
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBatchStoreSwitch(false)}
+                >
+                  全部关闭
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>门店名称</TableHead>
+                    <TableHead className="text-center">加价开关</TableHead>
+                    <TableHead className="text-right">本月收入</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {storeData.map((store) => (
+                    <TableRow key={store.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {store.name}
+                          {store.isNewStore && (
+                            <Badge variant="secondary">新店扶持</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Switch
+                          checked={store.enabled}
+                          onCheckedChange={(checked) =>
+                            handleStoreSwitch(store.id, checked)
+                          }
+                          disabled={!globalEnabled || store.isNewStore}
+                        />
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-right",
+                          store.isNewStore
+                            ? "text-muted-foreground"
+                            : store.markupIncome > 0
+                            ? "text-[hsl(var(--success))]"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {store.isNewStore
+                          ? "免加价"
+                          : `¥${store.markupIncome.toLocaleString()}`}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* 门店级开关 */}
-          <Col xs={24} lg={12}>
-            <Card
-              title={
-                <Space>
-                  <HomeOutlined />
-                  门店级开关
-                </Space>
-              }
-              extra={
-                <Space>
-                  <Button size="small" onClick={() => handleBatchStoreSwitch(true)}>
-                    全部开启
-                  </Button>
-                  <Button size="small" onClick={() => handleBatchStoreSwitch(false)}>
-                    全部关闭
-                  </Button>
-                </Space>
-              }
-              style={{ marginBottom: 24 }}
-            >
-              <Table
-                dataSource={storeData}
-                columns={storeColumns}
-                pagination={false}
-                size="small"
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        {/* 分类级开关 */}
-        <Card
-          title={
-            <Space>
-              <AppstoreOutlined />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Layers className="h-4 w-4" />
               分类级开关
-            </Space>
-          }
-        >
-          <Row>
-            <Col span={12}>
-              <Text type="secondary" style={{ marginBottom: 16, display: 'block' }}>
-                勾选的分类将启用加价，取消勾选则该分类下的商品不参与加价
-              </Text>
-              <Tree
-                checkable
-                defaultExpandAll
-                checkedKeys={checkedCategoryKeys}
-                onCheck={(keys) => setCheckedCategoryKeys(keys as React.Key[])}
-                treeData={categoryTreeData}
-              />
-            </Col>
-            <Col span={12}>
-              <Card size="small" style={{ background: '#fafafa' }}>
-                <Text strong>说明：</Text>
-                <ul style={{ paddingLeft: 20, marginTop: 8 }}>
-                  <li>标记为"低毛利"的分类建议不开启加价</li>
-                  <li>新店扶持期间自动免加价</li>
-                  <li>分类开关优先级高于商品级规则</li>
-                </ul>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground mb-4">
+                  勾选的分类将启用加价，取消勾选则该分类下的商品不参与加价
+                </p>
+                {categoryData.map((category) => (
+                  <Collapsible key={category.id} defaultOpen>
+                    <div className="flex items-center gap-2 py-1">
+                      <CollapsibleTrigger className="flex items-center gap-1 hover:text-primary">
+                        <ChevronRight className="h-4 w-4 transition-transform data-[state=open]:rotate-90" />
+                      </CollapsibleTrigger>
+                      <Checkbox
+                        checked={category.enabled}
+                        onCheckedChange={(checked) =>
+                          handleCategoryToggle(category.id, !!checked)
+                        }
+                      />
+                      <span className="font-medium">{category.name}</span>
+                    </div>
+                    <CollapsibleContent>
+                      <div className="ml-8 space-y-1">
+                        {category.children?.map((child) => (
+                          <div key={child.id} className="flex items-center gap-2 py-1">
+                            <Checkbox
+                              checked={child.enabled}
+                              onCheckedChange={(checked) =>
+                                handleCategoryToggle(child.id, !!checked)
+                              }
+                            />
+                            <span className="text-sm">{child.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+              <Card className="bg-muted/50">
+                <CardContent className="pt-6">
+                  <p className="font-medium mb-2">说明：</p>
+                  <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                    <li>标记为"低毛利"的分类建议不开启加价</li>
+                    <li>新店扶持期间自动免加价</li>
+                    <li>分类开关优先级高于商品级规则</li>
+                  </ul>
+                </CardContent>
               </Card>
-            </Col>
-          </Row>
+            </div>
+          </CardContent>
         </Card>
-      </div>
+      </WorkbenchShell>
     </AdminLayout>
   );
 }

@@ -1,36 +1,60 @@
-'use client';
+"use client";
 
+import { SupplierLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
 import {
-  DownloadOutlined,
-  EditOutlined,
-  PlusOutlined,
-  SearchOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Button,
-  Card,
-  Col,
-  Form,
-  Input,
-  InputNumber,
-  message,
-  Modal,
-  Popconfirm,
-  Row,
-  Select,
-  Space,
-  Table,
-  Tag,
-  Typography,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { useState } from 'react';
-
-const { Title, Paragraph } = Typography;
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { showToast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Download, Edit, Loader2, Plus, Search, Upload } from "lucide-react";
+import * as React from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 interface MaterialItem {
-  key: string;
   id: number;
   name: string;
   brand: string;
@@ -39,360 +63,480 @@ interface MaterialItem {
   category: string;
   price: number;
   stock: number;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
 }
 
+const materialSchema = z.object({
+  name: z.string().min(1, "请输入物料名称"),
+  brand: z.string().min(1, "请输入品牌"),
+  spec: z.string().min(1, "请输入规格"),
+  unit: z.string().min(1, "请输入单位"),
+  category: z.string().min(1, "请选择分类"),
+  price: z.number().min(0, "价格不能为负数"),
+  stock: z.number().min(0, "库存不能为负数").optional(),
+});
+
+type MaterialFormValues = z.infer<typeof materialSchema>;
+
+const categoryOptions = [
+  { value: "粮油", label: "粮油" },
+  { value: "调味品", label: "调味品" },
+  { value: "生鲜", label: "生鲜" },
+  { value: "饮料", label: "饮料" },
+];
+
 export default function SupplierMaterialsPage() {
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState<MaterialItem | null>(null);
-  const [form] = Form.useForm();
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [editingItem, setEditingItem] = React.useState<MaterialItem | null>(null);
+  const [statusDialogOpen, setStatusDialogOpen] = React.useState(false);
+  const [statusChangeItem, setStatusChangeItem] = React.useState<MaterialItem | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
-  // 筛选条件
-  const [searchText, setSearchText] = useState('');
-  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  // Filters
+  const [searchText, setSearchText] = React.useState("");
+  const [filterCategory, setFilterCategory] = React.useState<string>("all");
 
-  // 分类选项
-  const categoryOptions = [
-    { value: '粮油', label: '粮油' },
-    { value: '调味品', label: '调味品' },
-    { value: '生鲜', label: '生鲜' },
-    { value: '饮料', label: '饮料' },
-  ];
+  const form = useForm<MaterialFormValues>({
+    resolver: zodResolver(materialSchema),
+    defaultValues: {
+      name: "",
+      brand: "",
+      spec: "",
+      unit: "",
+      category: "",
+      price: 0,
+      stock: 0,
+    },
+  });
 
-  // 模拟物料数据
-  const [materialsData, setMaterialsData] = useState<MaterialItem[]>([
+  const [materialsData, setMaterialsData] = React.useState<MaterialItem[]>([
     {
-      key: '1',
       id: 1,
-      name: '金龙鱼大豆油',
-      brand: '金龙鱼',
-      spec: '5L/桶',
-      unit: '桶',
-      category: '粮油',
+      name: "金龙鱼大豆油",
+      brand: "金龙鱼",
+      spec: "5L/桶",
+      unit: "桶",
+      category: "粮油",
       price: 58.0,
       stock: 500,
-      status: 'active',
+      status: "active",
     },
     {
-      key: '2',
       id: 2,
-      name: '福临门花生油',
-      brand: '福临门',
-      spec: '5L/桶',
-      unit: '桶',
-      category: '粮油',
+      name: "福临门花生油",
+      brand: "福临门",
+      spec: "5L/桶",
+      unit: "桶",
+      category: "粮油",
       price: 68.0,
       stock: 300,
-      status: 'active',
+      status: "active",
     },
     {
-      key: '3',
       id: 3,
-      name: '中粮大米',
-      brand: '中粮',
-      spec: '10kg/袋',
-      unit: '袋',
-      category: '粮油',
+      name: "中粮大米",
+      brand: "中粮",
+      spec: "10kg/袋",
+      unit: "袋",
+      category: "粮油",
       price: 45.0,
       stock: 200,
-      status: 'active',
+      status: "active",
     },
     {
-      key: '4',
       id: 4,
-      name: '海天酱油',
-      brand: '海天',
-      spec: '500ml/瓶',
-      unit: '瓶',
-      category: '调味品',
+      name: "海天酱油",
+      brand: "海天",
+      spec: "500ml/瓶",
+      unit: "瓶",
+      category: "调味品",
       price: 12.5,
       stock: 0,
-      status: 'inactive',
+      status: "inactive",
     },
   ]);
 
-  // 打开新建/编辑弹窗
   const handleOpenModal = (item?: MaterialItem) => {
     if (item) {
       setEditingItem(item);
-      form.setFieldsValue(item);
+      form.reset({
+        name: item.name,
+        brand: item.brand,
+        spec: item.spec,
+        unit: item.unit,
+        category: item.category,
+        price: item.price,
+        stock: item.stock,
+      });
     } else {
       setEditingItem(null);
-      form.resetFields();
+      form.reset();
     }
-    setModalVisible(true);
+    setModalOpen(true);
   };
 
-  // 切换状态
-  const handleToggleStatus = (id: number, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+  const handleToggleStatus = (item: MaterialItem) => {
+    setStatusChangeItem(item);
+    setStatusDialogOpen(true);
+  };
+
+  const confirmStatusChange = () => {
+    if (!statusChangeItem) return;
+    const newStatus = statusChangeItem.status === "active" ? "inactive" : "active";
     setMaterialsData((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, status: newStatus as 'active' | 'inactive' } : item
+        item.id === statusChangeItem.id ? { ...item, status: newStatus } : item
       )
     );
-    message.success(`物料已${newStatus === 'active' ? '上架' : '下架'}`);
+    showToast.success(`物料已${newStatus === "active" ? "上架" : "下架"}`);
+    setStatusDialogOpen(false);
+    setStatusChangeItem(null);
   };
 
-  // 提交表单
-  const handleSubmit = async (values: Partial<MaterialItem>) => {
-    if (editingItem) {
-      setMaterialsData((prev) =>
-        prev.map((item) => (item.id === editingItem.id ? { ...item, ...values } : item))
-      );
-      message.success('物料信息已更新');
-    } else {
-      const newId = Date.now();
-      const newItem: MaterialItem = {
-        ...(values as Omit<MaterialItem, 'key' | 'id' | 'status'>),
-        key: String(newId),
-        id: newId,
-        status: 'active',
-      };
-      setMaterialsData((prev) => [...prev, newItem]);
-      message.success('物料已添加');
+  const onSubmit = async (values: MaterialFormValues) => {
+    setLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (editingItem) {
+        setMaterialsData((prev) =>
+          prev.map((item) =>
+            item.id === editingItem.id
+              ? { ...item, ...values, stock: values.stock ?? item.stock }
+              : item
+          )
+        );
+        showToast.success("物料信息已更新");
+      } else {
+        const newItem: MaterialItem = {
+          id: Date.now(),
+          ...values,
+          stock: values.stock ?? 0,
+          status: "active",
+        };
+        setMaterialsData((prev) => [...prev, newItem]);
+        showToast.success("物料已添加");
+      }
+      setModalOpen(false);
+      form.reset();
+    } finally {
+      setLoading(false);
     }
-    setModalVisible(false);
-    form.resetFields();
   };
 
-  // 表格列定义
-  const columns: ColumnsType<MaterialItem> = [
-    {
-      title: '物料名称',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: '品牌',
-      dataIndex: 'brand',
-      key: 'brand',
-    },
-    {
-      title: '规格',
-      dataIndex: 'spec',
-      key: 'spec',
-    },
-    {
-      title: '分类',
-      dataIndex: 'category',
-      key: 'category',
-      render: (category: string) => <Tag>{category}</Tag>,
-    },
-    {
-      title: '单价',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price: number) => `¥${price.toFixed(2)}`,
-    },
-    {
-      title: '库存',
-      dataIndex: 'stock',
-      key: 'stock',
-      render: (stock: number) => (
-        <span style={{ color: stock === 0 ? '#ff4d4f' : undefined }}>{stock}</span>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'active' ? 'green' : 'default'}>
-          {status === 'active' ? '上架' : '下架'}
-        </Tag>
-      ),
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenModal(record)}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title={record.status === 'active' ? '下架物料' : '上架物料'}
-            description={`确定要${record.status === 'active' ? '下架' : '上架'}此物料吗？`}
-            onConfirm={() => handleToggleStatus(record.id, record.status)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="link" size="small" danger={record.status === 'active'}>
-              {record.status === 'active' ? '下架' : '上架'}
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
-  // 过滤数据
   const filteredData = materialsData.filter((item) => {
     if (searchText && !item.name.includes(searchText) && !item.brand.includes(searchText)) {
       return false;
     }
-    if (filterCategory && item.category !== filterCategory) return false;
+    if (filterCategory !== "all" && item.category !== filterCategory) return false;
     return true;
   });
 
   return (
-    <div style={{ padding: 24 }}>
-      <Title level={3}>物料价格管理</Title>
-      <Paragraph type="secondary">管理您的物料信息和价格，支持批量导入导出</Paragraph>
+    <SupplierLayout>
+      <WorkbenchShell
+        badge="物料管理"
+        title="物料价格管理"
+        description="管理您的物料信息和价格，支持批量导入导出"
+        toolbar={
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="搜索物料名称或品牌"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="分类筛选" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部分类</SelectItem>
+                {categoryOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex-1" />
+            <Button variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              下载模板
+            </Button>
+            <Button variant="outline">
+              <Upload className="mr-2 h-4 w-4" />
+              批量导入
+            </Button>
+            <Button onClick={() => handleOpenModal()}>
+              <Plus className="mr-2 h-4 w-4" />
+              添加物料
+            </Button>
+          </div>
+        }
+        results={
+          <Card className="overflow-hidden animate-fade-in">
+            <CardContent className="p-0">
+              {/* Table */}
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>物料名称</TableHead>
+                    <TableHead>品牌</TableHead>
+                    <TableHead>规格</TableHead>
+                    <TableHead>分类</TableHead>
+                    <TableHead className="text-right">单价</TableHead>
+                    <TableHead className="text-right">库存</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead className="w-[140px]">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredData.map((item) => (
+                    <TableRow key={item.id} className="group">
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{item.brand}</TableCell>
+                      <TableCell>
+                        <span className="bg-muted/50 px-2 py-0.5 rounded text-xs">
+                          {item.spec}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">
+                          {item.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        ¥{item.price.toFixed(2)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-right tabular-nums",
+                          item.stock === 0 && "text-destructive font-medium"
+                        )}
+                      >
+                        {item.stock}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={item.status === "active" ? "success" : "secondary"}
+                        >
+                          {item.status === "active" ? "上架" : "下架"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => handleOpenModal(item)}
+                          >
+                            <Edit className="mr-1 h-3.5 w-3.5" />
+                            编辑
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                              "h-8",
+                              item.status === "active" && "text-destructive hover:text-destructive"
+                            )}
+                            onClick={() => handleToggleStatus(item)}
+                          >
+                            {item.status === "active" ? "下架" : "上架"}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-      <Card>
-        {/* 工具栏 */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={6}>
-            <Input
-              placeholder="搜索物料"
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={12} md={4}>
-            <Select
-              placeholder="分类筛选"
-              style={{ width: '100%' }}
-              options={[{ value: null, label: '全部分类' }, ...categoryOptions]}
-              value={filterCategory}
-              onChange={setFilterCategory}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={24} md={14} style={{ textAlign: 'right' }}>
-            <Space>
-              <Button icon={<DownloadOutlined />}>下载模板</Button>
-              <Button icon={<UploadOutlined />}>批量导入</Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-                添加物料
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-
-        {/* 物料表格 */}
-        <Table
-          dataSource={filteredData}
-          columns={columns}
-          pagination={{
-            total: filteredData.length,
-            pageSize: 10,
-            showTotal: (total) => `共 ${total} 个物料`,
-          }}
-        />
-      </Card>
-
-      {/* 新建/编辑弹窗 */}
-      <Modal
-        title={editingItem ? '编辑物料' : '添加物料'}
-        open={modalVisible}
-        onCancel={() => {
-          setModalVisible(false);
-          form.resetFields();
-        }}
-        footer={null}
-        width={600}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 text-sm text-muted-foreground">
+                <span>
+                  共 <span className="font-medium text-foreground">{filteredData.length}</span> 个物料
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        }
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="物料名称"
-                rules={[{ required: true, message: '请输入物料名称' }]}
-              >
-                <Input placeholder="请输入物料名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="brand"
-                label="品牌"
-                rules={[{ required: true, message: '请输入品牌' }]}
-              >
-                <Input placeholder="请输入品牌" />
-              </Form.Item>
-            </Col>
-          </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="category"
-                label="分类"
-                rules={[{ required: true, message: '请选择分类' }]}
-              >
-                <Select options={categoryOptions} placeholder="请选择分类" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="unit"
-                label="单位"
-                rules={[{ required: true, message: '请输入单位' }]}
-              >
-                <Input placeholder="如：桶、瓶、袋" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="spec"
-                label="规格"
-                rules={[{ required: true, message: '请输入规格' }]}
-              >
-                <Input placeholder="如：5L/桶" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="price"
-                label="单价"
-                rules={[{ required: true, message: '请输入单价' }]}
-              >
-                <InputNumber
-                  min={0}
-                  precision={2}
-                  addonBefore="¥"
-                  style={{ width: '100%' }}
-                  placeholder="请输入单价"
+        {/* Add/Edit Modal */}
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "编辑物料" : "添加物料"}</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>物料名称</FormLabel>
+                        <FormControl>
+                          <Input placeholder="请输入物料名称" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="brand"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>品牌</FormLabel>
+                        <FormControl>
+                          <Input placeholder="请输入品牌" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>分类</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="请选择分类" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categoryOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>单位</FormLabel>
+                        <FormControl>
+                          <Input placeholder="如：桶、瓶、袋" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="spec"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>规格</FormLabel>
+                        <FormControl>
+                          <Input placeholder="如：5L/桶" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>单价 (¥)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="请输入单价"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value))
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="stock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>库存</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="请输入库存数量"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </Form.Item>
-            </Col>
-          </Row>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setModalOpen(false)}
+                  >
+                    取消
+                  </Button>
+                  <Button type="submit" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {editingItem ? "保存" : "添加"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
 
-          <Form.Item name="stock" label="库存">
-            <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入库存数量" />
-          </Form.Item>
-
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit">
-                {editingItem ? '保存' : '添加'}
-              </Button>
-              <Button
-                onClick={() => {
-                  setModalVisible(false);
-                  form.resetFields();
-                }}
-              >
-                取消
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
-    </div>
+        {/* Status Change Dialog */}
+        <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {statusChangeItem?.status === "active" ? "下架物料" : "上架物料"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                确定要{statusChangeItem?.status === "active" ? "下架" : "上架"}此物料吗？
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmStatusChange}>
+                确定
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </WorkbenchShell>
+    </SupplierLayout>
   );
 }

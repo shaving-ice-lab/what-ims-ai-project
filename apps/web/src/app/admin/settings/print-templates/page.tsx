@@ -1,62 +1,105 @@
-'use client';
+"use client";
 
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
+import { AdminLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
 import {
-  Button,
-  Card,
-  Col,
-  Form,
-  Input,
-  message,
-  Modal,
-  Popconfirm,
-  Row,
-  Select,
-  Space,
-  Table,
-  Tag,
-  Typography,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { useState } from 'react';
-import AdminLayout from '../../../../components/layouts/AdminLayout';
-
-const { Title, Paragraph, Text } = Typography;
-const { TextArea } = Input;
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { showToast } from "@/lib/toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Copy, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import * as React from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 interface PrintTemplate {
-  key: string;
   id: number;
   name: string;
   content: string;
-  supplierIds: number[];
+  supplierIds: string[];
   supplierNames: string[];
   isDefault: boolean;
   createdAt: string;
 }
 
-export default function PrintTemplatesPage() {
-  const [modalVisible, setModalVisible] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState<PrintTemplate | null>(null);
-  const [previewContent, setPreviewContent] = useState('');
-  const [form] = Form.useForm();
+const formSchema = z.object({
+  name: z.string().min(1, "请输入模板名称"),
+  supplierIds: z.array(z.string()).optional(),
+  content: z.string().min(1, "请输入模板内容"),
+});
 
-  // 供应商选项
+type FormValues = z.infer<typeof formSchema>;
+
+export default function PrintTemplatesPage() {
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [editingItem, setEditingItem] = React.useState<PrintTemplate | null>(null);
+  const [previewContent, setPreviewContent] = React.useState("");
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      supplierIds: [],
+      content: "",
+    },
+  });
+
   const supplierOptions = [
-    { value: 1, label: '生鲜供应商A' },
-    { value: 2, label: '粮油供应商B' },
-    { value: 3, label: '调味品供应商C' },
-    { value: 4, label: '冷冻食品供应商D' },
-    { value: 5, label: '饮料供应商E' },
+    { value: "1", label: "生鲜供应商A" },
+    { value: "2", label: "粮油供应商B" },
+    { value: "3", label: "调味品供应商C" },
+    { value: "4", label: "冷冻食品供应商D" },
+    { value: "5", label: "饮料供应商E" },
   ];
 
-  // 模拟模板数据
-  const [templateData, setTemplateData] = useState<PrintTemplate[]>([
+  const [templateData, setTemplateData] = React.useState<PrintTemplate[]>([
     {
-      key: '1',
       id: 1,
-      name: '默认送货单模板',
+      name: "默认送货单模板",
       content: `【送货单】
 订单号：{{order_no}}
 下单时间：{{order_time}}
@@ -79,12 +122,11 @@ export default function PrintTemplatesPage() {
       supplierIds: [],
       supplierNames: [],
       isDefault: true,
-      createdAt: '2024-01-10',
+      createdAt: "2024-01-10",
     },
     {
-      key: '2',
       id: 2,
-      name: '生鲜供应商专用模板',
+      name: "生鲜供应商专用模板",
       content: `【生鲜送货单】
 订单号：{{order_no}}
 门店：{{store_name}}
@@ -95,273 +137,371 @@ export default function PrintTemplatesPage() {
 ----------------------------------------
 温馨提示：请当场验收生鲜商品
 签收人：____________`,
-      supplierIds: [1],
-      supplierNames: ['生鲜供应商A'],
+      supplierIds: ["1"],
+      supplierNames: ["生鲜供应商A"],
       isDefault: false,
-      createdAt: '2024-01-15',
+      createdAt: "2024-01-15",
     },
   ]);
 
-  // 可用变量
   const availableVariables = [
-    { name: '{{order_no}}', desc: '订单号' },
-    { name: '{{order_time}}', desc: '下单时间' },
-    { name: '{{store_name}}', desc: '门店名称' },
-    { name: '{{store_address}}', desc: '门店地址' },
-    { name: '{{contact_name}}', desc: '联系人' },
-    { name: '{{contact_phone}}', desc: '联系电话' },
-    { name: '{{total_amount}}', desc: '订单总金额' },
-    { name: '{{#items}}...{{/items}}', desc: '商品列表循环' },
-    { name: '{{item_name}}', desc: '商品名称' },
-    { name: '{{spec}}', desc: '商品规格' },
-    { name: '{{quantity}}', desc: '数量' },
-    { name: '{{unit}}', desc: '单位' },
-    { name: '{{price}}', desc: '单价' },
+    { name: "{{order_no}}", desc: "订单号" },
+    { name: "{{order_time}}", desc: "下单时间" },
+    { name: "{{store_name}}", desc: "门店名称" },
+    { name: "{{store_address}}", desc: "门店地址" },
+    { name: "{{contact_name}}", desc: "联系人" },
+    { name: "{{contact_phone}}", desc: "联系电话" },
+    { name: "{{total_amount}}", desc: "订单总金额" },
+    { name: "{{#items}}...{{/items}}", desc: "商品列表循环" },
+    { name: "{{item_name}}", desc: "商品名称" },
+    { name: "{{spec}}", desc: "商品规格" },
+    { name: "{{quantity}}", desc: "数量" },
+    { name: "{{unit}}", desc: "单位" },
+    { name: "{{price}}", desc: "单价" },
   ];
 
-  // 打开新建/编辑弹窗
   const handleOpenModal = (item?: PrintTemplate) => {
     if (item) {
       setEditingItem(item);
-      form.setFieldsValue(item);
+      form.reset({
+        name: item.name,
+        supplierIds: item.supplierIds,
+        content: item.content,
+      });
     } else {
       setEditingItem(null);
-      form.resetFields();
+      form.reset({ name: "", supplierIds: [], content: "" });
     }
-    setModalVisible(true);
+    setModalOpen(true);
   };
 
-  // 预览模板
   const handlePreview = (content: string) => {
-    // 模拟数据替换
     let previewText = content
-      .replace('{{order_no}}', 'ORD202401290001')
-      .replace('{{order_time}}', '2024-01-29 10:30:00')
-      .replace('{{store_name}}', '门店A - 朝阳店')
-      .replace('{{store_address}}', '北京市朝阳区XX路XX号')
-      .replace('{{contact_name}}', '张三')
-      .replace('{{contact_phone}}', '138****8888')
-      .replace('{{total_amount}}', '358.00')
+      .replace("{{order_no}}", "ORD202401290001")
+      .replace("{{order_time}}", "2024-01-29 10:30:00")
+      .replace("{{store_name}}", "门店A - 朝阳店")
+      .replace("{{store_address}}", "北京市朝阳区XX路XX号")
+      .replace("{{contact_name}}", "张三")
+      .replace("{{contact_phone}}", "138****8888")
+      .replace("{{total_amount}}", "358.00")
       .replace(
         /\{\{#items\}\}[\s\S]*?\{\{\/items\}\}/g,
-        '金龙鱼大豆油5L x2 桶  ¥116.00\n海天酱油500ml x5 瓶  ¥62.50\n中粮大米10kg x2 袋  ¥90.00'
+        "金龙鱼大豆油5L x2 桶  ¥116.00\n海天酱油500ml x5 瓶  ¥62.50\n中粮大米10kg x2 袋  ¥90.00"
       );
 
     setPreviewContent(previewText);
-    setPreviewVisible(true);
+    setPreviewOpen(true);
   };
 
-  // 删除模板
   const handleDelete = (id: number) => {
     setTemplateData((prev) => prev.filter((item) => item.id !== id));
-    message.success('模板已删除');
+    showToast.success("模板已删除");
   };
 
-  // 提交表单
-  const handleSubmit = async (values: { name: string; content: string; supplierIds: number[] }) => {
+  const onSubmit = (values: FormValues) => {
     const supplierNames =
       values.supplierIds
-        ?.map((id) => supplierOptions.find((s) => s.value === id)?.label ?? '')
+        ?.map((id) => supplierOptions.find((s) => s.value === id)?.label ?? "")
         .filter(Boolean) ?? [];
 
     if (editingItem) {
       setTemplateData((prev) =>
         prev.map((item) =>
-          item.id === editingItem.id ? { ...item, ...values, supplierNames } : item
+          item.id === editingItem.id
+            ? { ...item, ...values, supplierNames }
+            : item
         )
       );
-      message.success('模板已更新');
+      showToast.success("模板已更新");
     } else {
       const newItem: PrintTemplate = {
-        key: String(Date.now()),
         id: Date.now(),
         name: values.name,
         content: values.content,
         supplierIds: values.supplierIds || [],
         supplierNames,
         isDefault: false,
-        createdAt: new Date().toISOString().split('T')[0] ?? '',
+        createdAt: new Date().toISOString().split("T")[0] ?? "",
       };
       setTemplateData((prev) => [...prev, newItem]);
-      message.success('模板已创建');
+      showToast.success("模板已创建");
     }
-    setModalVisible(false);
+    setModalOpen(false);
   };
 
-  // 表格列定义
-  const columns: ColumnsType<PrintTemplate> = [
-    {
-      title: '模板名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (name: string, record) => (
-        <Space>
-          {name}
-          {record.isDefault && <Tag color="blue">默认</Tag>}
-        </Space>
-      ),
-    },
-    {
-      title: '分配供应商',
-      dataIndex: 'supplierNames',
-      key: 'supplierNames',
-      render: (names: string[]) =>
-        names.length > 0 ? (
-          names.map((n) => <Tag key={n}>{n}</Tag>)
-        ) : (
-          <Text type="secondary">全部供应商</Text>
-        ),
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => handlePreview(record.content)}
-          >
-            预览
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenModal(record)}
-          >
-            编辑
-          </Button>
-          {!record.isDefault && (
-            <Popconfirm
-              title="删除模板"
-              description="确定要删除此模板吗？"
-              onConfirm={() => handleDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button type="link" size="small" danger icon={<DeleteOutlined />}>
-                删除
-              </Button>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ];
+  const copyVariable = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showToast.success("已复制到剪贴板");
+  };
 
   return (
     <AdminLayout>
-      <div>
-        <Title level={3}>送货单模板配置</Title>
-        <Paragraph type="secondary">管理送货单打印模板，可为不同供应商分配专属模板</Paragraph>
+      <WorkbenchShell
+        badge="打印模板"
+        title="送货单模板配置"
+        description="管理送货单打印模板，可为不同供应商分配专属模板"
+        actions={
+          <Button onClick={() => handleOpenModal()}>
+            <Plus className="mr-2 h-4 w-4" />
+            创建模板
+          </Button>
+        }
+        sidebar={
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">模板概览</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">模板总数</span>
+                <span className="font-semibold">{templateData.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">默认模板</span>
+                <span className="font-semibold">
+                  {templateData.filter((item) => item.isDefault).length}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        }
+        results={
+          <Card>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base">模板列表</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>模板名称</TableHead>
+                      <TableHead>分配供应商</TableHead>
+                      <TableHead>创建时间</TableHead>
+                      <TableHead className="w-[200px]">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {templateData.map((template) => (
+                      <TableRow key={template.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {template.name}
+                            {template.isDefault && (
+                              <Badge variant="secondary">默认</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {template.supplierNames.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {template.supplierNames.map((n) => (
+                                <Badge key={n} variant="outline">
+                                  {n}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">全部供应商</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {template.createdAt}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePreview(template.content)}
+                            >
+                              <Eye className="mr-1 h-4 w-4" />
+                              预览
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenModal(template)}
+                            >
+                              <Pencil className="mr-1 h-4 w-4" />
+                              编辑
+                            </Button>
+                            {!template.isDefault && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-[hsl(var(--error))]">
+                                    <Trash2 className="mr-1 h-4 w-4" />
+                                    删除
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>删除模板</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      确定要删除此模板吗？
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(template.id)}
+                                    >
+                                      确定
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        }
+      />
 
-        <Card
-          title="模板列表"
-          extra={
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-              创建模板
-            </Button>
-          }
-        >
-          <Table dataSource={templateData} columns={columns} pagination={false} />
-        </Card>
-
-        {/* 新建/编辑弹窗 */}
-        <Modal
-          title={editingItem ? '编辑模板' : '创建模板'}
-          open={modalVisible}
-          onCancel={() => setModalVisible(false)}
-          footer={null}
-          width={800}
-        >
-          <Row gutter={24}>
-            <Col span={16}>
-              <Form form={form} layout="vertical" onFinish={handleSubmit}>
-                <Form.Item
-                  name="name"
-                  label="模板名称"
-                  rules={[{ required: true, message: '请输入模板名称' }]}
-                >
-                  <Input placeholder="请输入模板名称" />
-                </Form.Item>
-
-                <Form.Item name="supplierIds" label="分配供应商" tooltip="不选择则对所有供应商生效">
-                  <Select
-                    mode="multiple"
-                    placeholder="选择供应商（不选则对全部生效）"
-                    options={supplierOptions}
-                    allowClear
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingItem ? "编辑模板" : "创建模板"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-6">
+            <div className="col-span-2">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>模板名称</FormLabel>
+                        <FormControl>
+                          <Input placeholder="请输入模板名称" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </Form.Item>
 
-                <Form.Item
-                  name="content"
-                  label="模板内容"
-                  rules={[{ required: true, message: '请输入模板内容' }]}
-                >
-                  <TextArea
-                    rows={15}
-                    placeholder="请输入模板内容，可使用右侧变量"
-                    style={{ fontFamily: 'monospace' }}
+                  <FormField
+                    control={form.control}
+                    name="supplierIds"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>分配供应商</FormLabel>
+                        <Select
+                          onValueChange={(value) =>
+                            field.onChange(
+                              field.value?.includes(value)
+                                ? field.value.filter((v) => v !== value)
+                                : [...(field.value || []), value]
+                            )
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="选择供应商（不选则对全部生效）">
+                                {field.value && field.value.length > 0
+                                  ? `已选择 ${field.value.length} 个供应商`
+                                  : "选择供应商（不选则对全部生效）"}
+                              </SelectValue>
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {supplierOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>不选择则对所有供应商生效</FormDescription>
+                      </FormItem>
+                    )}
                   />
-                </Form.Item>
 
-                <Form.Item>
-                  <Space>
-                    <Button type="primary" htmlType="submit">
-                      {editingItem ? '保存' : '创建'}
+                  <FormField
+                    control={form.control}
+                    name="content"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>模板内容</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            rows={15}
+                            placeholder="请输入模板内容，可使用右侧变量"
+                            className="font-mono"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex gap-2">
+                    <Button type="submit">
+                      {editingItem ? "保存" : "创建"}
                     </Button>
-                    <Button onClick={() => setModalVisible(false)}>取消</Button>
-                  </Space>
-                </Form.Item>
-              </Form>
-            </Col>
-            <Col span={8}>
-              <Card size="small" title="可用变量" style={{ background: '#fafafa' }}>
-                {availableVariables.map((v, i) => (
-                  <div key={i} style={{ marginBottom: 8 }}>
-                    <Text code copyable={{ text: v.name }}>
-                      {v.name}
-                    </Text>
-                    <br />
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {v.desc}
-                    </Text>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setModalOpen(false)}
+                    >
+                      取消
+                    </Button>
                   </div>
-                ))}
+                </form>
+              </Form>
+            </div>
+            <div>
+              <Card className="bg-muted/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">可用变量</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {availableVariables.map((v, i) => (
+                    <div key={i} className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <code className="text-xs bg-background px-1 py-0.5 rounded">
+                          {v.name}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5"
+                          onClick={() => copyVariable(v.name)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{v.desc}</p>
+                    </div>
+                  ))}
+                </CardContent>
               </Card>
-            </Col>
-          </Row>
-        </Modal>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-        {/* 预览弹窗 */}
-        <Modal
-          title="模板预览"
-          open={previewVisible}
-          onCancel={() => setPreviewVisible(false)}
-          footer={null}
-          width={500}
-        >
-          <pre
-            style={{
-              background: '#f5f5f5',
-              padding: 16,
-              borderRadius: 4,
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'monospace',
-            }}
-          >
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>模板预览</DialogTitle>
+          </DialogHeader>
+          <pre className="bg-muted p-4 rounded-lg whitespace-pre-wrap font-mono text-sm">
             {previewContent}
           </pre>
-        </Modal>
-      </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

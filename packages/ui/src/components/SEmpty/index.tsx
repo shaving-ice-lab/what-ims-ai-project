@@ -1,41 +1,33 @@
-import React from 'react';
+import { Inbox } from "lucide-react";
+import * as React from "react";
+import { cn } from "../../lib/utils";
 
-import { Button, Empty, EmptyProps } from 'antd';
-
-export interface SEmptyProps extends EmptyProps {
-  /** 操作按钮文字 */
-  actionText?: string;
-  /** 操作按钮点击回调 */
-  onAction?: () => void;
-  /** 空状态类型 */
-  type?: 'default' | 'noData' | 'noResult' | 'error';
+export interface SEmptyProps extends React.HTMLAttributes<HTMLDivElement> {
+  icon?: React.ReactNode;
+  description?: React.ReactNode;
 }
 
-const typeConfig = {
-  default: { description: '暂无数据' },
-  noData: { description: '暂无数据' },
-  noResult: { description: '未找到相关结果' },
-  error: { description: '加载失败，请稍后重试' },
-};
+const SEmpty = React.forwardRef<HTMLDivElement, SEmptyProps>(
+  ({ className, icon, description = "暂无数据", children, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "flex flex-col items-center justify-center py-8 text-center",
+          className
+        )}
+        {...props}
+      >
+        {icon || (
+          <Inbox className="h-12 w-12 text-muted-foreground/50 mb-4" />
+        )}
+        <p className="text-sm text-muted-foreground">{description}</p>
+        {children && <div className="mt-4">{children}</div>}
+      </div>
+    );
+  }
+);
+SEmpty.displayName = "SEmpty";
 
-export const SEmpty: React.FC<SEmptyProps> = ({
-  type = 'default',
-  actionText,
-  onAction,
-  description,
-  ...restProps
-}) => {
-  const config = typeConfig[type];
+export { SEmpty };
 
-  return (
-    <Empty description={description || config.description} {...restProps}>
-      {actionText && onAction && (
-        <Button type="primary" onClick={onAction}>
-          {actionText}
-        </Button>
-      )}
-    </Empty>
-  );
-};
-
-export default SEmpty;

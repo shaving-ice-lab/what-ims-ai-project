@@ -1,17 +1,26 @@
-'use client';
+"use client";
 
 /**
  * SearchBar - 搜索筛选栏组件
  * 动态表单项配置、展开/收起、重置功能
  */
 
-import { DownOutlined, SearchOutlined, UpOutlined } from '@ant-design/icons';
-import { Button, Col, DatePicker, Form, Input, Row, Select, Space } from 'antd';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { DatePicker, DateRangePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { ChevronDown, ChevronUp, Loader2, RotateCcw, Search } from "lucide-react";
+import * as React from "react";
+import type { DateRange } from "react-day-picker";
 
-const { RangePicker } = DatePicker;
-
-export type SearchFieldType = 'input' | 'select' | 'dateRange' | 'date';
+export type SearchFieldType = "input" | "select" | "dateRange" | "date";
 
 export interface SearchField {
   /** 字段名 */
@@ -53,105 +62,147 @@ const SearchBar: React.FC<SearchBarProps> = ({
   onReset,
   showExpand = true,
   defaultExpanded = false,
-  debounceTime = 300,
+  debounceTime: _debounceTime = 300,
   loading = false,
 }) => {
-  const [form] = Form.useForm();
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // debounceTime is reserved for future use in auto-search functionality
+  void _debounceTime;
+  
+  const [expanded, setExpanded] = React.useState(defaultExpanded);
+  const [values, setValues] = React.useState<Record<string, unknown>>({});
 
   // 获取可见字段
-  const visibleFields = expanded ? fields : fields.filter((f) => !f.expandOnly);
+  const visibleFields = expanded
+    ? fields
+    : fields.filter((f) => !f.expandOnly);
 
   // 是否有可展开的字段
   const hasExpandableFields = fields.some((f) => f.expandOnly);
 
   // 设置默认值
-  useEffect(() => {
+  React.useEffect(() => {
     const defaultValues: Record<string, unknown> = {};
     fields.forEach((field) => {
       if (field.defaultValue !== undefined) {
         defaultValues[field.name] = field.defaultValue;
       }
     });
-    form.setFieldsValue(defaultValues);
-  }, [fields, form]);
+    setValues(defaultValues);
+  }, [fields]);
 
-  // 防抖搜索
-  const handleSearch = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      const values = form.getFieldsValue();
-      onSearch(values);
-    }, debounceTime);
-  }, [form, onSearch, debounceTime]);
+  // 更新值
+  const handleValueChange = (name: string, value: unknown) => {
+    setValues((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // 提交搜索
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSearch(values);
+  };
 
   // 重置
-  const handleReset = useCallback(() => {
-    form.resetFields();
+  const handleReset = React.useCallback(() => {
+    setValues({});
     onReset?.();
     onSearch({});
-  }, [form, onReset, onSearch]);
+  }, [onReset, onSearch]);
 
   // 渲染字段
   const renderField = (field: SearchField) => {
+    const value = values[field.name];
+
     switch (field.type) {
-      case 'select':
+      case "select":
         return (
           <Select
-            placeholder={field.placeholder || `请选择${field.label}`}
-            allowClear
-            options={field.options}
-            style={{ width: '100%' }}
+            value={value as string | undefined}
+            onValueChange={(v) => handleValueChange(field.name, v)}
+          >
+            <SelectTrigger>
+              <SelectValue
+                placeholder={field.placeholder || `请选择${field.label}`}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option) => (
+                <SelectItem
+                  key={String(option.value)}
+                  value={String(option.value)}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      case "dateRange":
+        return (
+          <DateRangePicker
+            date={value as DateRange | undefined}
+            onDateChange={(range) => handleValueChange(field.name, range)}
           />
         );
-      case 'dateRange':
-        return <RangePicker placeholder={['开始日期', '结束日期']} style={{ width: '100%' }} />;
-      case 'date':
+      case "date":
         return (
           <DatePicker
-            placeholder={field.placeholder || `请选择${field.label}`}
-            style={{ width: '100%' }}
+            date={value as Date | undefined}
+            onDateChange={(date) => handleValueChange(field.name, date)}
           />
         );
       default:
-        return <Input placeholder={field.placeholder || `请输入${field.label}`} allowClear />;
+        return (
+          <Input
+            placeholder={field.placeholder || `请输入${field.label}`}
+            value={(value as string) || ""}
+            onChange={(e) => handleValueChange(field.name, e.target.value)}
+          />
+        );
     }
   };
 
   return (
-    <Form form={form} layout="vertical" onFinish={handleSearch}>
-      <Row gutter={16}>
+    <form onSubmit={handleSubmit} className="rounded-xl border border-border/50 bg-card/50 p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {visibleFields.map((field) => (
-          <Col key={field.name} xs={24} sm={12} md={8} lg={6}>
-            <Form.Item name={field.name} label={field.label}>
-              {renderField(field)}
-            </Form.Item>
-          </Col>
+          <div key={field.name} className="space-y-1.5">
+            <Label htmlFor={field.name} className="text-xs font-medium text-muted-foreground">
+              {field.label}
+            </Label>
+            {renderField(field)}
+          </div>
         ))}
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Form.Item label=" ">
-            <Space>
-              <Button type="primary" htmlType="submit" icon={<SearchOutlined />} loading={loading}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-              {showExpand && hasExpandableFields && (
-                <Button
-                  type="link"
-                  onClick={() => setExpanded(!expanded)}
-                  icon={expanded ? <UpOutlined /> : <DownOutlined />}
-                >
-                  {expanded ? '收起' : '展开'}
-                </Button>
+        <div className="flex items-end gap-2 col-span-1 sm:col-span-2 md:col-span-1">
+          <Button type="submit" disabled={loading} className="flex-1 md:flex-none">
+            {loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="mr-2 h-4 w-4" />
+            )}
+            搜索
+          </Button>
+          <Button type="button" variant="outline" onClick={handleReset}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            重置
+          </Button>
+          {showExpand && hasExpandableFields && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setExpanded(!expanded)}
+              className="shrink-0"
+            >
+              {expanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
               )}
-            </Space>
-          </Form.Item>
-        </Col>
-      </Row>
-    </Form>
+            </Button>
+          )}
+        </div>
+      </div>
+    </form>
   );
 };
 

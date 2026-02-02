@@ -15,7 +15,6 @@
   ],
   "eslint.workingDirectories": [
     "./apps/web",
-    "./apps/mobile",
     "./packages/*"
   ],
   "[go]": {

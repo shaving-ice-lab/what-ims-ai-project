@@ -1,26 +1,15 @@
-'use client';
+"use client";
 
-import { hasPermission, type Permission } from '@/utils/permission';
-import type { ButtonProps } from 'antd';
-import { Button, Tooltip } from 'antd';
-import React from 'react';
-import { useSelector } from 'react-redux';
-
-// 定义用户信息类型
-interface UserInfo {
-  id: number;
-  username: string;
-  role: 'admin' | 'sub_admin' | 'supplier' | 'store';
-  isPrimary?: boolean;
-  permissions?: string[];
-}
-
-// 定义Store状态类型
-interface AppState {
-  user: {
-    user: UserInfo | null;
-  };
-}
+import { Button, type ButtonProps } from "@/components/ui/button";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { RootState } from "@/store";
+import { hasPermission, type Permission } from "@/utils/permission";
+import * as React from "react";
+import { useSelector } from "react-redux";
 
 interface PermissionButtonProps extends ButtonProps {
   permission: Permission;
@@ -30,36 +19,46 @@ interface PermissionButtonProps extends ButtonProps {
 }
 
 /**
- * 权限按钮组件
- * 根据用户权限控制按钮的显示和可用状态
+ * Permission Button Component
+ * Controls button visibility and availability based on user permissions
  */
 export function PermissionButton({
   permission,
   fallback,
   hideOnNoPermission = false,
-  tooltipOnNoPermission = '暂无权限',
+  tooltipOnNoPermission = "暂无权限",
   children,
   ...buttonProps
 }: PermissionButtonProps) {
-  const user = useSelector((state: AppState) => state.user.user);
+  const user = useSelector((state: RootState) => state.auth.user);
   const userPermissions = (user?.permissions ?? []) as Permission[];
 
   const canAccess = user
-    ? hasPermission(user.role, userPermissions, user.isPrimary ?? false, permission)
+    ? hasPermission(
+        user.role,
+        userPermissions,
+        user.isPrimary ?? false,
+        permission
+      )
     : false;
 
-  // 无权限时隐藏
+  // Hide when no permission
   if (!canAccess && hideOnNoPermission) {
     return fallback ? <>{fallback}</> : null;
   }
 
-  // 无权限时禁用并显示提示
+  // Disable and show tooltip when no permission
   if (!canAccess) {
     return (
-      <Tooltip title={tooltipOnNoPermission}>
-        <Button {...buttonProps} disabled>
-          {children}
-        </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>
+            <Button {...buttonProps} disabled>
+              {children}
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{tooltipOnNoPermission}</TooltipContent>
       </Tooltip>
     );
   }
@@ -75,8 +74,8 @@ interface PermissionGuardProps {
 }
 
 /**
- * 权限守卫组件
- * 根据用户权限控制子组件的显示
+ * Permission Guard Component
+ * Controls child component visibility based on user permissions
  */
 export function PermissionGuard({
   permission,
@@ -84,7 +83,7 @@ export function PermissionGuard({
   fallback = null,
   children,
 }: PermissionGuardProps) {
-  const user = useSelector((state: AppState) => state.user.user);
+  const user = useSelector((state: RootState) => state.auth.user);
   const userPermissions = (user?.permissions ?? []) as Permission[];
 
   if (!user) {
@@ -95,10 +94,20 @@ export function PermissionGuard({
 
   const canAccess = requireAll
     ? permissions.every((perm) =>
-        hasPermission(user.role, userPermissions, user.isPrimary ?? false, perm)
+        hasPermission(
+          user.role,
+          userPermissions,
+          user.isPrimary ?? false,
+          perm
+        )
       )
     : permissions.some((perm) =>
-        hasPermission(user.role, userPermissions, user.isPrimary ?? false, perm)
+        hasPermission(
+          user.role,
+          userPermissions,
+          user.isPrimary ?? false,
+          perm
+        )
       );
 
   if (!canAccess) {

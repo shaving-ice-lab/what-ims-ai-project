@@ -1,64 +1,85 @@
-'use client';
+"use client";
 
 /**
  * SEmpty - 统一空状态组件
- * 基于 Ant Design Empty 组件封装
+ * 基于 shadcn/ui 封装
  * 内置常见空状态（无数据、无搜索结果、网络错误）
  */
 
-import { FileSearchOutlined, InboxOutlined, WifiOutlined } from '@ant-design/icons';
-import { Button, Empty, type EmptyProps } from 'antd';
-import React from 'react';
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Inbox, RefreshCw, Search, WifiOff } from "lucide-react";
+import * as React from "react";
 
-export type EmptyType = 'default' | 'noData' | 'noResult' | 'networkError';
+export type EmptyType = "default" | "noData" | "noResult" | "networkError";
 
-export interface SEmptyProps extends Omit<EmptyProps, 'description'> {
+export interface SEmptyProps {
   /** 空状态类型 */
   type?: EmptyType;
+  /** 自定义图标 */
+  icon?: React.ReactNode;
   /** 自定义描述 */
   description?: React.ReactNode;
   /** 重试回调（用于网络错误） */
   onRetry?: () => void;
+  /** 额外的内容 */
+  children?: React.ReactNode;
+  /** 额外类名 */
+  className?: string;
 }
 
-const emptyConfig: Record<EmptyType, { icon: React.ReactNode; description: string }> = {
+const emptyConfig: Record<
+  EmptyType,
+  { icon: React.ReactNode; description: string }
+> = {
   default: {
-    icon: <InboxOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />,
-    description: '暂无数据',
+    icon: <Inbox className="h-12 w-12 text-muted-foreground/50" />,
+    description: "暂无数据",
   },
   noData: {
-    icon: <InboxOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />,
-    description: '暂无数据',
+    icon: <Inbox className="h-12 w-12 text-muted-foreground/50" />,
+    description: "暂无数据",
   },
   noResult: {
-    icon: <FileSearchOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />,
-    description: '未找到相关结果',
+    icon: <Search className="h-12 w-12 text-muted-foreground/50" />,
+    description: "未找到相关结果",
   },
   networkError: {
-    icon: <WifiOutlined style={{ fontSize: 48, color: '#ff4d4f' }} />,
-    description: '网络连接失败',
+    icon: <WifiOff className="h-12 w-12 text-[hsl(var(--error))]" />,
+    description: "网络连接失败",
   },
 };
 
 const SEmpty: React.FC<SEmptyProps> = ({
-  type = 'default',
+  type = "default",
+  icon,
   description,
   onRetry,
   children,
-  ...rest
+  className,
 }) => {
   const config = emptyConfig[type];
 
   return (
-    <Empty image={config.icon} description={description ?? config.description} {...rest}>
-      {type === 'networkError' && onRetry ? (
-        <Button type="primary" onClick={onRetry}>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center py-12 px-4",
+        className
+      )}
+    >
+      <div className="mb-4">{icon || config.icon}</div>
+      <p className="text-muted-foreground text-sm mb-4">
+        {description ?? config.description}
+      </p>
+      {type === "networkError" && onRetry ? (
+        <Button variant="outline" onClick={onRetry}>
+          <RefreshCw className="mr-2 h-4 w-4" />
           重试
         </Button>
       ) : (
         children
       )}
-    </Empty>
+    </div>
   );
 };
 

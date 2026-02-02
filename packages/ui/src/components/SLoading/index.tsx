@@ -1,43 +1,40 @@
-import React from 'react';
+import { Loader2 } from "lucide-react";
+import * as React from "react";
+import { cn } from "../../lib/utils";
 
-import { Spin, SpinProps } from 'antd';
-
-export interface SLoadingProps extends SpinProps {
-  /** 是否全屏显示 */
+export interface SLoadingProps extends React.HTMLAttributes<HTMLDivElement> {
+  size?: "sm" | "default" | "lg";
+  text?: string;
   fullscreen?: boolean;
-  /** 遮罩层背景色 */
-  maskColor?: string;
 }
 
-export const SLoading: React.FC<SLoadingProps> = ({
-  fullscreen = false,
-  maskColor = 'rgba(255, 255, 255, 0.8)',
-  tip = '加载中...',
-  size = 'default',
-  ...restProps
-}) => {
-  if (fullscreen) {
-    return (
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: maskColor,
-          zIndex: 9999,
-        }}
-      >
-        <Spin tip={tip} size={size} {...restProps} />
-      </div>
-    );
-  }
-
-  return <Spin tip={tip} size={size} {...restProps} />;
+const sizeClasses = {
+  sm: "h-4 w-4",
+  default: "h-6 w-6",
+  lg: "h-8 w-8",
 };
 
-export default SLoading;
+const SLoading = React.forwardRef<HTMLDivElement, SLoadingProps>(
+  ({ className, size = "default", text, fullscreen, ...props }, ref) => {
+    const content = (
+      <div
+        ref={ref}
+        className={cn(
+          "flex flex-col items-center justify-center gap-2",
+          fullscreen && "fixed inset-0 bg-background/80 backdrop-blur-sm z-50",
+          className
+        )}
+        {...props}
+      >
+        <Loader2 className={cn("animate-spin text-primary", sizeClasses[size])} />
+        {text && <span className="text-sm text-muted-foreground">{text}</span>}
+      </div>
+    );
+
+    return content;
+  }
+);
+SLoading.displayName = "SLoading";
+
+export { SLoading };
+

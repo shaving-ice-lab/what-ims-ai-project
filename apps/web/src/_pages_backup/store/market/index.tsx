@@ -516,6 +516,7 @@ const StoreMarket: React.FC = () => {
             );
           })
         )}
+        </Spin>
 
         {/* 快速对比模态框 */}
         <Modal

@@ -1,77 +1,68 @@
-'use client';
+"use client";
 
 /**
  * StoreSelect - 门店选择组件
- * 基于Ant Design Select，支持按区域筛选、搜索
+ * 支持按区域筛选、搜索
  */
 
-import { EnvironmentOutlined, ShopOutlined } from '@ant-design/icons';
-import type { SelectProps } from 'antd';
-import { Cascader, Select, Space, Tag } from 'antd';
-import React, { useCallback, useEffect, useState } from 'react';
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { Loader2, MapPin, Search, Store } from "lucide-react";
+import * as React from "react";
 
 export interface StoreOption {
-  /** 门店ID */
   id: number;
-  /** 门店名称 */
   name: string;
-  /** 门店编号 */
   storeNo?: string;
-  /** 省 */
   province?: string;
-  /** 市 */
   city?: string;
-  /** 区 */
   district?: string;
-  /** 详细地址 */
   address?: string;
-  /** 联系人 */
   contactName?: string;
-  /** 联系电话 */
   contactPhone?: string;
-  /** 状态：1-启用，0-禁用 */
   status: number;
 }
 
 export interface AreaOption {
-  /** 区域值（省/市/区编码或名称） */
   value: string;
-  /** 区域标签 */
   label: string;
-  /** 子区域 */
   children?: AreaOption[];
 }
 
-export interface StoreSelectProps extends Omit<SelectProps, 'options' | 'value' | 'onChange'> {
-  /** 门店列表数据 */
+export interface StoreSelectProps {
   stores?: StoreOption[];
-  /** 远程加载门店数据的函数 */
   fetchStores?: (params?: {
     keyword?: string;
     province?: string;
     city?: string;
     district?: string;
   }) => Promise<StoreOption[]>;
-  /** 区域选项（用于区域筛选） */
   areaOptions?: AreaOption[];
-  /** 选中的门店ID */
   value?: number | number[];
-  /** 选中变化回调 */
   onChange?: (value: number | number[] | undefined) => void;
-  /** 是否多选模式 */
   multiple?: boolean;
-  /** 是否显示区域筛选 */
   showAreaFilter?: boolean;
-  /** 是否显示门店状态 */
   showStatus?: boolean;
-  /** 是否只显示启用的门店 */
   onlyActive?: boolean;
-  /** 是否显示地址信息 */
   showAddress?: boolean;
+  placeholder?: string;
+  loading?: boolean;
+  disabled?: boolean;
+  className?: string;
 }
 
 const StoreSelect: React.FC<StoreSelectProps> = ({
-  stores: propStores,
+  stores: propStores = [],
   fetchStores,
   areaOptions,
   value,
@@ -81,18 +72,19 @@ const StoreSelect: React.FC<StoreSelectProps> = ({
   showStatus = true,
   onlyActive = true,
   showAddress = false,
-  placeholder,
+  placeholder = "请选择门店",
   loading: propLoading,
   disabled,
-  ...restProps
+  className,
 }) => {
-  const [stores, setStores] = useState<StoreOption[]>(propStores || []);
-  const [loading, setLoading] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
-  const [selectedArea, setSelectedArea] = useState<string[]>([]);
+  const [stores, setStores] = React.useState<StoreOption[]>(propStores);
+  const [loading, setLoading] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState("");
+  const [open, setOpen] = React.useState(false);
+  const [selectedArea, setSelectedArea] = React.useState<string[]>([]);
 
-  // 加载门店数据
-  const loadStores = useCallback(
+  // Load stores
+  const loadStores = React.useCallback(
     async (params?: { keyword?: string; province?: string; city?: string; district?: string }) => {
       if (fetchStores) {
         setLoading(true);
@@ -100,7 +92,7 @@ const StoreSelect: React.FC<StoreSelectProps> = ({
           const data = await fetchStores(params);
           setStores(data);
         } catch (error) {
-          console.error('加载门店数据失败:', error);
+          console.error("加载门店数据失败:", error);
         } finally {
           setLoading(false);
         }
@@ -109,60 +101,29 @@ const StoreSelect: React.FC<StoreSelectProps> = ({
     [fetchStores]
   );
 
-  // 初始化加载
-  useEffect(() => {
+  // Initial load
+  React.useEffect(() => {
     if (fetchStores && stores.length === 0) {
       loadStores();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchStores]);
+  }, [fetchStores, stores.length, loadStores]);
 
-  // 使用props传入的stores
-  useEffect(() => {
-    if (propStores) {
+  // Sync props
+  React.useEffect(() => {
+    if (propStores.length > 0) {
       setStores(propStores);
     }
   }, [propStores]);
 
-  // 搜索处理
-  const handleSearch = useCallback(
-    (value: string) => {
-      setSearchValue(value);
-      if (fetchStores) {
-        const [province, city, district] = selectedArea;
-        loadStores({ keyword: value, province, city, district });
-      }
-    },
-    [fetchStores, loadStores, selectedArea]
-  );
-
-  // 区域筛选变化
-  const handleAreaChange = useCallback(
-    (value: (string | number)[]) => {
-      const areaValues = value as string[];
-      setSelectedArea(areaValues);
-      if (fetchStores) {
-        const [province, city, district] = areaValues;
-        loadStores({ keyword: searchValue, province, city, district });
-      }
-    },
-    [fetchStores, loadStores, searchValue]
-  );
-
-  // 过滤门店列表
+  // Filter stores
   const filteredStores = stores.filter((store) => {
-    // 只显示启用的门店
-    if (onlyActive && store.status !== 1) {
-      return false;
-    }
-    // 区域过滤
+    if (onlyActive && store.status !== 1) return false;
     if (selectedArea.length > 0 && !fetchStores) {
       const [province, city, district] = selectedArea;
       if (province && store.province !== province) return false;
       if (city && store.city !== city) return false;
       if (district && store.district !== district) return false;
     }
-    // 本地搜索过滤（如果没有远程搜索）
     if (!fetchStores && searchValue) {
       const keyword = searchValue.toLowerCase();
       return (
@@ -174,104 +135,211 @@ const StoreSelect: React.FC<StoreSelectProps> = ({
     return true;
   });
 
-  // 渲染门店选项
-  const renderOption = (store: StoreOption) => {
-    const statusBadge =
-      showStatus && store.status !== 1 ? (
-        <Tag color="red" style={{ marginLeft: 8 }}>
-          已禁用
-        </Tag>
-      ) : null;
+  // Handle single select
+  const handleSingleSelect = (storeId: string) => {
+    onChange?.(parseInt(storeId));
+    setOpen(false);
+  };
 
-    const addressInfo =
-      showAddress && store.address ? (
-        <div style={{ color: '#999', fontSize: 12 }}>
-          <EnvironmentOutlined style={{ marginRight: 4 }} />
-          {store.province}
-          {store.city}
-          {store.district} {store.address}
-        </div>
-      ) : null;
+  // Handle multi select toggle
+  const handleMultiSelectToggle = (storeId: number) => {
+    const currentValues = (value as number[]) || [];
+    const newValues = currentValues.includes(storeId)
+      ? currentValues.filter((id) => id !== storeId)
+      : [...currentValues, storeId];
+    onChange?.(newValues);
+  };
 
+  // Get display label
+  const getDisplayLabel = () => {
+    if (!value) return placeholder;
+    if (multiple) {
+      const selectedCount = (value as number[])?.length || 0;
+      if (selectedCount === 0) return placeholder;
+      return `已选择 ${selectedCount} 家门店`;
+    }
+    const store = stores.find((s) => s.id === value);
+    return store?.name || placeholder;
+  };
+
+  // Single select mode
+  if (!multiple) {
     return (
-      <div>
-        <Space>
-          <ShopOutlined />
-          <span>{store.name}</span>
-          {store.storeNo && <span style={{ color: '#999', fontSize: 12 }}>({store.storeNo})</span>}
-          {statusBadge}
-        </Space>
-        {addressInfo}
+      <div className={cn("space-y-2", className)}>
+        {showAreaFilter && areaOptions && (
+          <Select
+            value={selectedArea[0]}
+            onValueChange={(v) => {
+              setSelectedArea([v]);
+              if (fetchStores) {
+                loadStores({ keyword: searchValue, province: v });
+              }
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="选择区域筛选" />
+            </SelectTrigger>
+            <SelectContent>
+              {areaOptions.map((area) => (
+                <SelectItem key={area.value} value={area.value}>
+                  {area.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Select
+          value={value?.toString()}
+          onValueChange={handleSingleSelect}
+          disabled={disabled}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {filteredStores.map((store) => (
+              <SelectItem
+                key={store.id}
+                value={store.id.toString()}
+                disabled={onlyActive && store.status !== 1}
+              >
+                <div className="flex items-center gap-2">
+                  <Store className="h-4 w-4 text-muted-foreground" />
+                  <span>{store.name}</span>
+                  {store.storeNo && (
+                    <span className="text-xs text-muted-foreground">
+                      ({store.storeNo})
+                    </span>
+                  )}
+                  {showStatus && store.status !== 1 && (
+                    <Badge variant="error" className="ml-1">
+                      已禁用
+                    </Badge>
+                  )}
+                </div>
+                {showAddress && store.address && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                    <MapPin className="h-3 w-3" />
+                    {store.province}
+                    {store.city}
+                    {store.district} {store.address}
+                  </div>
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     );
-  };
+  }
 
-  // 渲染选中标签
-  const tagRender: SelectProps['tagRender'] = (props) => {
-    const { label, value, closable, onClose } = props;
-    const store = stores.find((s) => s.id === value);
-    const isDisabled = store && store.status !== 1;
-
-    return (
-      <Tag
-        color={isDisabled ? 'red' : 'green'}
-        closable={closable}
-        onClose={onClose}
-        style={{ marginRight: 3 }}
-      >
-        {label}
-      </Tag>
-    );
-  };
-
-  // 选项列表
-  const options = filteredStores.map((store) => ({
-    label: renderOption(store),
-    value: store.id,
-    disabled: onlyActive && store.status !== 1,
-    title: store.name,
-  }));
-
-  // 获取显示值
-  const getDisplayValue = () => {
-    if (multiple) {
-      return value as number[] | undefined;
-    }
-    return value as number | undefined;
-  };
-
+  // Multiple select mode
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
+    <div className={cn("space-y-2", className)}>
       {showAreaFilter && areaOptions && (
-        <Cascader
-          options={areaOptions}
-          value={selectedArea}
-          onChange={handleAreaChange}
-          placeholder="选择区域筛选"
-          changeOnSelect
-          allowClear
-          style={{ width: '100%' }}
-        />
+        <Select
+          value={selectedArea[0]}
+          onValueChange={(v) => {
+            setSelectedArea([v]);
+            if (fetchStores) {
+              loadStores({ keyword: searchValue, province: v });
+            }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="选择区域筛选" />
+          </SelectTrigger>
+          <SelectContent>
+            {areaOptions.map((area) => (
+              <SelectItem key={area.value} value={area.value}>
+                {area.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
-      <Select
-        showSearch
-        allowClear
-        mode={multiple ? 'multiple' : undefined}
-        placeholder={placeholder || '请选择门店'}
-        value={getDisplayValue()}
-        onChange={onChange}
-        onSearch={handleSearch}
-        loading={propLoading || loading}
-        disabled={disabled}
-        filterOption={!fetchStores}
-        optionFilterProp="title"
-        options={options}
-        tagRender={multiple ? tagRender : undefined}
-        notFoundContent={loading ? '加载中...' : '暂无门店'}
-        style={{ width: '100%' }}
-        {...restProps}
-      />
-    </Space>
+
+      <div className="relative">
+        <div
+          className={cn(
+            "flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer",
+            disabled && "cursor-not-allowed opacity-50"
+          )}
+          onClick={() => !disabled && setOpen(!open)}
+        >
+          <span className={!value || (value as number[]).length === 0 ? "text-muted-foreground" : ""}>
+            {getDisplayLabel()}
+          </span>
+          {(propLoading || loading) && (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          )}
+        </div>
+
+        {open && (
+          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+            <div className="p-2 border-b">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="搜索门店..."
+                  value={searchValue}
+                  onChange={(e) => {
+                    setSearchValue(e.target.value);
+                    if (fetchStores) {
+                      const [province, city, district] = selectedArea;
+                      loadStores({
+                        keyword: e.target.value,
+                        province,
+                        city,
+                        district,
+                      });
+                    }
+                  }}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <ScrollArea className="max-h-[200px]">
+              {filteredStores.map((store) => {
+                const isSelected = (value as number[])?.includes(store.id);
+                return (
+                  <div
+                    key={store.id}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-accent",
+                      isSelected && "bg-accent"
+                    )}
+                    onClick={() => handleMultiSelectToggle(store.id)}
+                  >
+                    <Checkbox checked={isSelected} />
+                    <Store className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1">
+                        <span>{store.name}</span>
+                        {store.storeNo && (
+                          <span className="text-xs text-muted-foreground">
+                            ({store.storeNo})
+                          </span>
+                        )}
+                        {showStatus && store.status !== 1 && (
+                          <Badge variant="error">已禁用</Badge>
+                        )}
+                      </div>
+                      {showAddress && store.address && (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {store.address}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </ScrollArea>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

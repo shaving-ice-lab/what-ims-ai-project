@@ -1,16 +1,21 @@
-'use client';
+"use client";
 
 /**
  * AreaSelect - 配送区域选择组件
  * 省市区三级联动，支持多选、数据懒加载、已选区域列表展示
  */
 
-import { EnvironmentOutlined, PlusOutlined } from '@ant-design/icons';
-import type { CascaderProps } from 'antd';
-import { Button, Cascader, Space, Tag, Typography } from 'antd';
-import React, { useCallback, useEffect, useState } from 'react';
-
-const { Text } = Typography;
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { MapPin, Plus, Trash2, X } from "lucide-react";
+import * as React from "react";
 
 export interface AreaNode {
   /** 区域编码或名称 */
@@ -62,226 +67,283 @@ export interface AreaSelectProps {
 }
 
 const AreaSelect: React.FC<AreaSelectProps> = ({
-  areaData: propAreaData,
+  areaData: propAreaData = [],
   loadAreaData,
   value = [],
   onChange,
   multiple = true,
   maxCount,
   allowNonLeaf = true,
-  placeholder = '选择配送区域',
+  placeholder: _placeholder = "选择配送区域",
   disabled = false,
   showSelectedList = true,
 }) => {
-  const [areaData, setAreaData] = useState<AreaNode[]>(propAreaData || []);
-  const [selectedAreas, setSelectedAreas] = useState<SelectedArea[]>(value);
-  const [cascaderValue, setCascaderValue] = useState<string[]>([]);
+  const [areaData, setAreaData] = React.useState<AreaNode[]>(propAreaData);
+  const [selectedAreas, setSelectedAreas] = React.useState<SelectedArea[]>(value);
+  const [selectedProvince, setSelectedProvince] = React.useState<string>("");
+  const [selectedCity, setSelectedCity] = React.useState<string>("");
+  const [selectedDistrict, setSelectedDistrict] = React.useState<string>("");
 
-  // 使用props传入的数据
-  useEffect(() => {
-    if (propAreaData) {
+  // Use props data
+  React.useEffect(() => {
+    if (propAreaData.length > 0) {
       setAreaData(propAreaData);
     }
   }, [propAreaData]);
 
-  // 同步外部value
-  useEffect(() => {
+  // Sync external value
+  React.useEffect(() => {
     setSelectedAreas(value);
   }, [value]);
 
-  // 懒加载子区域数据
-  const handleLoadData = useCallback(
-    async (selectedOptions: AreaNode[]) => {
-      if (!loadAreaData || selectedOptions.length === 0) return;
+  // Get cities for selected province
+  const cities = React.useMemo(() => {
+    const province = areaData.find((p) => p.value === selectedProvince);
+    return province?.children || [];
+  }, [areaData, selectedProvince]);
 
-      const targetOption = selectedOptions[selectedOptions.length - 1];
-      if (!targetOption) return;
+  // Get districts for selected city
+  const districts = React.useMemo(() => {
+    const province = areaData.find((p) => p.value === selectedProvince);
+    const city = province?.children?.find((c) => c.value === selectedCity);
+    return city?.children || [];
+  }, [areaData, selectedProvince, selectedCity]);
 
-      try {
-        const children = await loadAreaData(selectedOptions);
-        targetOption.children = children;
-        setAreaData([...areaData]);
-      } catch (error) {
-        console.error('加载区域数据失败:', error);
+  // Handle province change
+  const handleProvinceChange = async (value: string) => {
+    setSelectedProvince(value);
+    setSelectedCity("");
+    setSelectedDistrict("");
+
+    // Load cities if using lazy loading
+    if (loadAreaData) {
+      const province = areaData.find((p) => p.value === value);
+      if (province && !province.children) {
+        try {
+          const children = await loadAreaData([province]);
+          province.children = children;
+          setAreaData([...areaData]);
+        } catch (error) {
+          console.error("Failed to load cities:", error);
+        }
       }
-    },
-    [loadAreaData, areaData]
-  );
+    }
+  };
 
-  // 查找区域标签
-  const findAreaLabel = useCallback(
-    (level: number, values: string[]): string => {
-      let nodes = areaData;
-      for (let i = 0; i <= level; i++) {
-        const node = nodes.find((n) => n.value === values[i]);
-        if (!node) return values[level] || '';
-        if (i === level) return node.label;
-        nodes = node.children || [];
+  // Handle city change
+  const handleCityChange = async (value: string) => {
+    setSelectedCity(value);
+    setSelectedDistrict("");
+
+    // Load districts if using lazy loading
+    if (loadAreaData) {
+      const province = areaData.find((p) => p.value === selectedProvince);
+      const city = province?.children?.find((c) => c.value === value);
+      if (city && !city.children) {
+        try {
+          const children = await loadAreaData([province!, city]);
+          city.children = children;
+          setAreaData([...areaData]);
+        } catch (error) {
+          console.error("Failed to load districts:", error);
+        }
       }
-      return values[level] || '';
-    },
-    [areaData]
-  );
+    }
+  };
 
-  // 添加区域
-  const handleAddArea = useCallback(
-    (values: (string | number)[]) => {
-      if (!values || values.length === 0) return;
+  // Add area
+  const handleAddArea = () => {
+    if (!selectedProvince) return;
 
-      const stringValues = values.map(String);
-      const provinceValue = stringValues[0];
-      if (!provinceValue) return;
+    const province = areaData.find((p) => p.value === selectedProvince);
+    if (!province) return;
 
-      // 构建选中的区域对象
-      const newArea: SelectedArea = {
-        province: provinceValue,
-        provinceLabel: findAreaLabel(0, stringValues),
-      };
+    const newArea: SelectedArea = {
+      province: selectedProvince,
+      provinceLabel: province.label,
+    };
 
-      if (stringValues[1]) {
-        newArea.city = stringValues[1];
-        newArea.cityLabel = findAreaLabel(1, stringValues);
+    if (selectedCity) {
+      const city = province.children?.find((c) => c.value === selectedCity);
+      if (city) {
+        newArea.city = selectedCity;
+        newArea.cityLabel = city.label;
+
+        if (selectedDistrict) {
+          const district = city.children?.find((d) => d.value === selectedDistrict);
+          if (district) {
+            newArea.district = selectedDistrict;
+            newArea.districtLabel = district.label;
+          }
+        }
       }
+    }
 
-      if (stringValues[2]) {
-        newArea.district = stringValues[2];
-        newArea.districtLabel = findAreaLabel(2, stringValues);
-      }
+    // Check if already exists
+    const exists = selectedAreas.some(
+      (area) =>
+        area.province === newArea.province &&
+        area.city === newArea.city &&
+        area.district === newArea.district
+    );
 
-      // 检查是否已存在
-      const exists = selectedAreas.some(
-        (area) =>
-          area.province === newArea.province &&
-          area.city === newArea.city &&
-          area.district === newArea.district
-      );
+    if (exists) return;
 
-      if (exists) return;
+    // Check max count
+    if (maxCount && selectedAreas.length >= maxCount) return;
 
-      // 检查最大数量限制
-      if (maxCount && selectedAreas.length >= maxCount) return;
+    let newSelectedAreas: SelectedArea[];
+    if (multiple) {
+      newSelectedAreas = [...selectedAreas, newArea];
+    } else {
+      newSelectedAreas = [newArea];
+    }
 
-      let newSelectedAreas: SelectedArea[];
-      if (multiple) {
-        newSelectedAreas = [...selectedAreas, newArea];
-      } else {
-        newSelectedAreas = [newArea];
-      }
+    setSelectedAreas(newSelectedAreas);
+    onChange?.(newSelectedAreas);
 
-      setSelectedAreas(newSelectedAreas);
-      onChange?.(newSelectedAreas);
-      setCascaderValue([]); // 清空选择器
-    },
-    [selectedAreas, findAreaLabel, multiple, maxCount, onChange]
-  );
+    // Reset selection
+    setSelectedProvince("");
+    setSelectedCity("");
+    setSelectedDistrict("");
+  };
 
-  // 移除区域
-  const handleRemoveArea = useCallback(
-    (index: number) => {
-      const newSelectedAreas = selectedAreas.filter((_, i) => i !== index);
-      setSelectedAreas(newSelectedAreas);
-      onChange?.(newSelectedAreas);
-    },
-    [selectedAreas, onChange]
-  );
+  // Remove area
+  const handleRemoveArea = (index: number) => {
+    const newSelectedAreas = selectedAreas.filter((_, i) => i !== index);
+    setSelectedAreas(newSelectedAreas);
+    onChange?.(newSelectedAreas);
+  };
 
-  // 清空所有区域
-  const handleClearAll = useCallback(() => {
+  // Clear all
+  const handleClearAll = () => {
     setSelectedAreas([]);
     onChange?.([]);
-  }, [onChange]);
+  };
 
-  // 格式化区域显示文本
+  // Format area text
   const formatAreaText = (area: SelectedArea): string => {
     const parts = [area.provinceLabel];
     if (area.cityLabel) parts.push(area.cityLabel);
     if (area.districtLabel) parts.push(area.districtLabel);
-    return parts.join(' / ');
+    return parts.join(" / ");
   };
 
-  // 渲染已选区域列表
-  const renderSelectedList = () => {
-    if (!showSelectedList || selectedAreas.length === 0) return null;
-
-    return (
-      <div
-        style={{
-          marginTop: 8,
-          padding: 12,
-          backgroundColor: '#fafafa',
-          borderRadius: 6,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 8,
-          }}
-        >
-          <Text strong>
-            <EnvironmentOutlined style={{ marginRight: 4 }} />
-            已选区域 ({selectedAreas.length}
-            {maxCount ? `/${maxCount}` : ''})
-          </Text>
-          {selectedAreas.length > 1 && (
-            <Button type="link" size="small" danger onClick={handleClearAll}>
-              清空全部
-            </Button>
-          )}
-        </div>
-        <Space wrap>
-          {selectedAreas.map((area, index) => (
-            <Tag
-              key={`${area.province}-${area.city || ''}-${area.district || ''}`}
-              closable
-              onClose={() => handleRemoveArea(index)}
-              color="blue"
-            >
-              {formatAreaText(area)}
-            </Tag>
-          ))}
-        </Space>
-      </div>
-    );
-  };
-
-  // Cascader配置
-  const cascaderProps: CascaderProps<AreaNode> = {
-    options: areaData,
-    value: cascaderValue,
-    onChange: handleAddArea,
-    loadData: loadAreaData ? handleLoadData : undefined,
-    changeOnSelect: allowNonLeaf,
-    placeholder,
-    disabled: disabled || (maxCount !== undefined && selectedAreas.length >= maxCount),
-    showSearch: {
-      filter: (inputValue, path) =>
-        path.some((option) => option.label.toLowerCase().indexOf(inputValue.toLowerCase()) > -1),
-    },
-    style: { width: '100%' },
-  };
+  const isMaxReached = maxCount !== undefined && selectedAreas.length >= maxCount;
 
   return (
-    <div>
-      <Space.Compact style={{ width: '100%' }}>
-        <Cascader {...cascaderProps} />
+    <div className="space-y-3">
+      {/* Selectors */}
+      <div className="flex flex-wrap gap-2">
+        <Select
+          value={selectedProvince}
+          onValueChange={handleProvinceChange}
+          disabled={disabled || isMaxReached}
+        >
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="选择省份" />
+          </SelectTrigger>
+          <SelectContent>
+            {areaData.map((province) => (
+              <SelectItem key={province.value} value={province.value}>
+                {province.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={selectedCity}
+          onValueChange={handleCityChange}
+          disabled={disabled || !selectedProvince || isMaxReached}
+        >
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="选择城市" />
+          </SelectTrigger>
+          <SelectContent>
+            {cities.map((city) => (
+              <SelectItem key={city.value} value={city.value}>
+                {city.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={selectedDistrict}
+          onValueChange={setSelectedDistrict}
+          disabled={disabled || !selectedCity || isMaxReached}
+        >
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="选择区县" />
+          </SelectTrigger>
+          <SelectContent>
+            {districts.map((district) => (
+              <SelectItem key={district.value} value={district.value}>
+                {district.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {multiple && (
           <Button
-            icon={<PlusOutlined />}
-            disabled={disabled || (maxCount !== undefined && selectedAreas.length >= maxCount)}
-            onClick={() => {
-              if (cascaderValue.length > 0) {
-                handleAddArea(cascaderValue);
-              }
-            }}
+            onClick={handleAddArea}
+            disabled={
+              disabled ||
+              !selectedProvince ||
+              (!allowNonLeaf && !selectedDistrict) ||
+              isMaxReached
+            }
           >
+            <Plus className="mr-1 h-4 w-4" />
             添加
           </Button>
         )}
-      </Space.Compact>
-      {renderSelectedList()}
+      </div>
+
+      {/* Selected Areas List */}
+      {showSelectedList && selectedAreas.length > 0 && (
+        <div className="p-3 bg-muted/50 rounded-lg">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium flex items-center gap-1">
+              <MapPin className="h-4 w-4" />
+              已选区域 ({selectedAreas.length}
+              {maxCount ? `/${maxCount}` : ""})
+            </span>
+            {selectedAreas.length > 1 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[hsl(var(--error))] h-auto py-1"
+                onClick={handleClearAll}
+              >
+                <Trash2 className="mr-1 h-3 w-3" />
+                清空全部
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {selectedAreas.map((area, index) => (
+              <Badge
+                key={`${area.province}-${area.city || ""}-${area.district || ""}`}
+                variant="secondary"
+                className="flex items-center gap-1 pr-1"
+              >
+                {formatAreaText(area)}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-4 w-4 ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
+                  onClick={() => handleRemoveArea(index)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

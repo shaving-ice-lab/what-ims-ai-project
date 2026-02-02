@@ -1,24 +1,32 @@
-'use client';
+"use client";
 
 /**
  * PermissionMenu - 权限菜单组件
  * 根据用户权限动态生成侧边栏菜单
  */
 
+import { Button } from "@/components/ui/button";
 import {
-  BarChartOutlined,
-  DashboardOutlined,
-  FileImageOutlined,
-  MoneyCollectOutlined,
-  OrderedListOutlined,
-  SettingOutlined,
-  ShopOutlined,
-  TeamOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
-import { Menu, type MenuProps } from 'antd';
-import { useRouter } from 'next/navigation';
-import React, { useMemo } from 'react';
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
+import {
+    BarChart3,
+    ChevronDown,
+    ClipboardList,
+    DollarSign,
+    Image,
+    LayoutDashboard,
+    Package,
+    Settings,
+    Store,
+    User,
+    Users,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import * as React from "react";
 
 export interface MenuConfig {
   key: string;
@@ -27,158 +35,157 @@ export interface MenuConfig {
   path?: string;
   permission?: string;
   children?: MenuConfig[];
-  roles?: ('admin' | 'sub_admin' | 'supplier' | 'store')[];
+  roles?: ("admin" | "sub_admin" | "supplier" | "store")[];
 }
 
-// 管理员菜单配置
+// Icon mapping
+const iconMap: Record<string, React.ReactNode> = {
+  dashboard: <LayoutDashboard className="h-4 w-4" />,
+  orders: <ClipboardList className="h-4 w-4" />,
+  suppliers: <Users className="h-4 w-4" />,
+  stores: <Store className="h-4 w-4" />,
+  materials: <Package className="h-4 w-4" />,
+  media: <Image className="h-4 w-4" />,
+  markup: <DollarSign className="h-4 w-4" />,
+  reports: <BarChart3 className="h-4 w-4" />,
+  system: <Settings className="h-4 w-4" />,
+  settings: <Settings className="h-4 w-4" />,
+  home: <LayoutDashboard className="h-4 w-4" />,
+  cart: <Package className="h-4 w-4" />,
+  profile: <User className="h-4 w-4" />,
+  prices: <DollarSign className="h-4 w-4" />,
+};
+
+// Admin menu config
 const adminMenuConfig: MenuConfig[] = [
   {
-    key: 'dashboard',
-    label: '数据看板',
-    icon: <DashboardOutlined />,
-    path: '/admin/dashboard',
+    key: "dashboard",
+    label: "数据看板",
+    path: "/admin/dashboard",
   },
   {
-    key: 'orders',
-    label: '订单管理',
-    icon: <OrderedListOutlined />,
-    path: '/admin/orders',
-    permission: 'order',
+    key: "orders",
+    label: "订单管理",
+    path: "/admin/orders",
+    permission: "order",
   },
   {
-    key: 'suppliers',
-    label: '供应商管理',
-    icon: <TeamOutlined />,
-    path: '/admin/suppliers',
-    permission: 'supplier',
+    key: "suppliers",
+    label: "供应商管理",
+    path: "/admin/suppliers",
+    permission: "supplier",
   },
   {
-    key: 'stores',
-    label: '门店管理',
-    icon: <ShopOutlined />,
-    path: '/admin/stores',
-    permission: 'store',
+    key: "stores",
+    label: "门店管理",
+    path: "/admin/stores",
+    permission: "store",
   },
   {
-    key: 'materials',
-    label: '物料管理',
-    icon: <ShopOutlined />,
-    path: '/admin/materials',
-    permission: 'material',
+    key: "materials",
+    label: "物料管理",
+    path: "/admin/materials",
+    permission: "material",
   },
   {
-    key: 'media',
-    label: '素材库',
-    icon: <FileImageOutlined />,
-    path: '/admin/media',
-    permission: 'media',
+    key: "media",
+    label: "素材库",
+    path: "/admin/media",
+    permission: "media",
   },
   {
-    key: 'markup',
-    label: '加价管理',
-    icon: <MoneyCollectOutlined />,
-    path: '/admin/markup',
-    permission: 'markup',
+    key: "markup",
+    label: "加价管理",
+    path: "/admin/markup",
+    permission: "markup",
   },
   {
-    key: 'reports',
-    label: '数据报表',
-    icon: <BarChartOutlined />,
-    path: '/admin/reports',
-    permission: 'report',
+    key: "reports",
+    label: "数据报表",
+    path: "/admin/reports",
+    permission: "report",
   },
   {
-    key: 'system',
-    label: '系统设置',
-    icon: <SettingOutlined />,
-    permission: 'system_config',
+    key: "system",
+    label: "系统设置",
+    permission: "system_config",
     children: [
       {
-        key: 'admins',
-        label: '管理员管理',
-        path: '/admin/system/admins',
-        permission: 'admin_manage',
+        key: "admins",
+        label: "管理员管理",
+        path: "/admin/system/admins",
+        permission: "admin_manage",
       },
       {
-        key: 'config',
-        label: '系统配置',
-        path: '/admin/system/config',
-        permission: 'system_config',
+        key: "config",
+        label: "系统配置",
+        path: "/admin/system/config",
+        permission: "system_config",
       },
     ],
   },
 ];
 
-// 供应商菜单配置
+// Supplier menu config
 const supplierMenuConfig: MenuConfig[] = [
   {
-    key: 'dashboard',
-    label: '数据概览',
-    icon: <DashboardOutlined />,
-    path: '/supplier/dashboard',
+    key: "dashboard",
+    label: "数据概览",
+    path: "/supplier/dashboard",
   },
   {
-    key: 'orders',
-    label: '订单管理',
-    icon: <OrderedListOutlined />,
-    path: '/supplier/orders',
+    key: "orders",
+    label: "订单管理",
+    path: "/supplier/orders",
   },
   {
-    key: 'materials',
-    label: '商品管理',
-    icon: <ShopOutlined />,
-    path: '/supplier/materials',
+    key: "materials",
+    label: "商品管理",
+    path: "/supplier/materials",
   },
   {
-    key: 'prices',
-    label: '价格管理',
-    icon: <MoneyCollectOutlined />,
-    path: '/supplier/prices',
+    key: "prices",
+    label: "价格管理",
+    path: "/supplier/prices",
   },
   {
-    key: 'settings',
-    label: '配送设置',
-    icon: <SettingOutlined />,
-    path: '/supplier/settings',
+    key: "settings",
+    label: "配送设置",
+    path: "/supplier/settings",
   },
 ];
 
-// 门店菜单配置
+// Store menu config
 const storeMenuConfig: MenuConfig[] = [
   {
-    key: 'home',
-    label: '首页',
-    icon: <DashboardOutlined />,
-    path: '/store/home',
+    key: "home",
+    label: "首页",
+    path: "/store/home",
   },
   {
-    key: 'suppliers',
-    label: '供应商列表',
-    icon: <TeamOutlined />,
-    path: '/store/suppliers',
+    key: "suppliers",
+    label: "供应商列表",
+    path: "/store/suppliers",
   },
   {
-    key: 'cart',
-    label: '购物车',
-    icon: <ShopOutlined />,
-    path: '/store/cart',
+    key: "cart",
+    label: "购物车",
+    path: "/store/cart",
   },
   {
-    key: 'orders',
-    label: '我的订单',
-    icon: <OrderedListOutlined />,
-    path: '/store/orders',
+    key: "orders",
+    label: "我的订单",
+    path: "/store/orders",
   },
   {
-    key: 'profile',
-    label: '个人中心',
-    icon: <UserOutlined />,
-    path: '/store/profile',
+    key: "profile",
+    label: "个人中心",
+    path: "/store/profile",
   },
 ];
 
 export interface PermissionMenuProps {
-  role: 'admin' | 'sub_admin' | 'supplier' | 'store';
+  role: "admin" | "sub_admin" | "supplier" | "store";
   permissions?: string[];
   isPrimary?: boolean;
   collapsed?: boolean;
@@ -195,46 +202,43 @@ const PermissionMenu: React.FC<PermissionMenuProps> = ({
   onSelect,
 }) => {
   const router = useRouter();
+  const [openKeys, setOpenKeys] = React.useState<string[]>([]);
 
-  // 根据角色获取菜单配置
+  // Get menu config based on role
   const getMenuConfig = (): MenuConfig[] => {
     switch (role) {
-      case 'admin':
-      case 'sub_admin':
+      case "admin":
+      case "sub_admin":
         return adminMenuConfig;
-      case 'supplier':
+      case "supplier":
         return supplierMenuConfig;
-      case 'store':
+      case "store":
         return storeMenuConfig;
       default:
         return [];
     }
   };
 
-  // 检查是否有权限
+  // Check permission
   const hasPermission = (permission?: string): boolean => {
     if (!permission) return true;
-    if (isPrimary) return true; // 主管理员拥有所有权限
+    if (isPrimary) return true;
     return permissions.includes(permission);
   };
 
-  // 过滤菜单项
+  // Filter menu items
   const filterMenuItems = (items: MenuConfig[]): MenuConfig[] => {
     return items.filter((item) => {
-      // 检查权限
       if (!hasPermission(item.permission)) {
         return false;
       }
 
-      // 检查角色
       if (item.roles && !item.roles.includes(role)) {
         return false;
       }
 
-      // 递归过滤子菜单
       if (item.children) {
         item.children = filterMenuItems(item.children);
-        // 如果所有子菜单都被过滤掉，则移除父菜单
         if (item.children.length === 0) {
           return false;
         }
@@ -244,27 +248,7 @@ const PermissionMenu: React.FC<PermissionMenuProps> = ({
     });
   };
 
-  // 转换为 Ant Design Menu 格式
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const convertToMenuItems = (items: MenuConfig[]): any[] => {
-    return items.map((item) => {
-      if (item.children && item.children.length > 0) {
-        return {
-          key: item.key,
-          icon: item.icon,
-          label: item.label,
-          children: convertToMenuItems(item.children),
-        };
-      }
-      return {
-        key: item.key,
-        icon: item.icon,
-        label: item.label,
-      };
-    });
-  };
-
-  // 构建路径映射
+  // Build path map
   const buildPathMap = (
     items: MenuConfig[],
     map: Record<string, string> = {}
@@ -280,14 +264,14 @@ const PermissionMenu: React.FC<PermissionMenuProps> = ({
     return map;
   };
 
-  const menuConfig = useMemo(
+  const menuConfig = React.useMemo(
     () => filterMenuItems(getMenuConfig()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [role, permissions, isPrimary]
   );
-  const menuItems = useMemo(() => convertToMenuItems(menuConfig), [menuConfig]);
-  const pathMap = useMemo(() => buildPathMap(menuConfig), [menuConfig]);
+  const pathMap = React.useMemo(() => buildPathMap(menuConfig), [menuConfig]);
 
-  const handleClick: MenuProps['onClick'] = ({ key }) => {
+  const handleClick = (key: string) => {
     const path = pathMap[key];
     if (path) {
       router.push(path);
@@ -295,16 +279,77 @@ const PermissionMenu: React.FC<PermissionMenuProps> = ({
     onSelect?.(key);
   };
 
+  const renderMenuItem = (item: MenuConfig) => {
+    const icon = iconMap[item.key] || iconMap.dashboard;
+    const isSelected = selectedKey === item.key;
+
+    if (item.children && item.children.length > 0) {
+      const isOpen = openKeys.includes(item.key);
+
+      return (
+        <Collapsible
+          key={item.key}
+          open={isOpen}
+          onOpenChange={(open) =>
+            setOpenKeys(
+              open
+                ? [...openKeys, item.key]
+                : openKeys.filter((k) => k !== item.key)
+            )
+          }
+        >
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start gap-2 px-3",
+                collapsed && "justify-center px-2"
+              )}
+            >
+              {icon}
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left">{item.label}</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      isOpen && "rotate-180"
+                    )}
+                  />
+                </>
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          {!collapsed && (
+            <CollapsibleContent className="pl-6 space-y-1">
+              {item.children.map((child) => renderMenuItem(child))}
+            </CollapsibleContent>
+          )}
+        </Collapsible>
+      );
+    }
+
+    return (
+      <Button
+        key={item.key}
+        variant={isSelected ? "secondary" : "ghost"}
+        className={cn(
+          "w-full justify-start gap-2 px-3",
+          collapsed && "justify-center px-2",
+          isSelected && "bg-accent"
+        )}
+        onClick={() => handleClick(item.key)}
+      >
+        {icon}
+        {!collapsed && <span>{item.label}</span>}
+      </Button>
+    );
+  };
+
   return (
-    <Menu
-      mode="inline"
-      theme="dark"
-      inlineCollapsed={collapsed}
-      selectedKeys={selectedKey ? [selectedKey] : undefined}
-      items={menuItems}
-      onClick={handleClick}
-      style={{ borderRight: 0 }}
-    />
+    <nav className="space-y-1">
+      {menuConfig.map((item) => renderMenuItem(item))}
+    </nav>
   );
 };
 

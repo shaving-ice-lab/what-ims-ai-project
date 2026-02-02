@@ -1,57 +1,54 @@
-'use client';
+"use client";
 
 /**
  * SupplierSelect - 供应商选择组件
- * 基于Ant Design Select，支持搜索、多选、显示供应商状态
+ * 支持搜索、多选、显示供应商状态
  */
 
-import { ShopOutlined } from '@ant-design/icons';
-import type { SelectProps } from 'antd';
-import { Select, Space, Tag } from 'antd';
-import React, { useCallback, useEffect, useState } from 'react';
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { Loader2, Search, Store } from "lucide-react";
+import * as React from "react";
 
 export interface SupplierOption {
-  /** 供应商ID */
   id: number;
-  /** 供应商名称 */
   name: string;
-  /** 显示名称 */
   displayName?: string;
-  /** 供应商编号 */
   supplierNo?: string;
-  /** 状态：1-启用，0-禁用 */
   status: number;
-  /** 联系人 */
   contactName?: string;
-  /** 联系电话 */
   contactPhone?: string;
-  /** 起送价 */
   minOrderAmount?: number;
-  /** 配送模式 */
-  deliveryMode?: 'self_delivery' | 'express_delivery';
+  deliveryMode?: "self_delivery" | "express_delivery";
 }
 
-export interface SupplierSelectProps extends Omit<SelectProps, 'options' | 'value' | 'onChange'> {
-  /** 供应商列表数据 */
+export interface SupplierSelectProps {
   suppliers?: SupplierOption[];
-  /** 远程加载供应商数据的函数 */
   fetchSuppliers?: (keyword?: string) => Promise<SupplierOption[]>;
-  /** 选中的供应商ID（单选模式） */
   value?: number | number[];
-  /** 选中变化回调 */
   onChange?: (value: number | number[] | undefined) => void;
-  /** 是否多选模式 */
   multiple?: boolean;
-  /** 是否显示供应商状态 */
   showStatus?: boolean;
-  /** 是否只显示启用的供应商 */
   onlyActive?: boolean;
-  /** 是否显示起送价 */
   showMinOrder?: boolean;
+  placeholder?: string;
+  loading?: boolean;
+  disabled?: boolean;
+  className?: string;
 }
 
 const SupplierSelect: React.FC<SupplierSelectProps> = ({
-  suppliers: propSuppliers,
+  suppliers: propSuppliers = [],
   fetchSuppliers,
   value,
   onChange,
@@ -59,17 +56,18 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
   showStatus = true,
   onlyActive = true,
   showMinOrder = false,
-  placeholder,
+  placeholder = "请选择供应商",
   loading: propLoading,
   disabled,
-  ...restProps
+  className,
 }) => {
-  const [suppliers, setSuppliers] = useState<SupplierOption[]>(propSuppliers || []);
-  const [loading, setLoading] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
+  const [suppliers, setSuppliers] = React.useState<SupplierOption[]>(propSuppliers);
+  const [loading, setLoading] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState("");
+  const [open, setOpen] = React.useState(false);
 
-  // 加载供应商数据
-  const loadSuppliers = useCallback(
+  // Load suppliers
+  const loadSuppliers = React.useCallback(
     async (keyword?: string) => {
       if (fetchSuppliers) {
         setLoading(true);
@@ -77,7 +75,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
           const data = await fetchSuppliers(keyword);
           setSuppliers(data);
         } catch (error) {
-          console.error('加载供应商数据失败:', error);
+          console.error("加载供应商数据失败:", error);
         } finally {
           setLoading(false);
         }
@@ -86,39 +84,23 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     [fetchSuppliers]
   );
 
-  // 初始化加载
-  useEffect(() => {
+  // Initial load
+  React.useEffect(() => {
     if (fetchSuppliers && suppliers.length === 0) {
       loadSuppliers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchSuppliers]);
+  }, [fetchSuppliers, suppliers.length, loadSuppliers]);
 
-  // 使用props传入的suppliers
-  useEffect(() => {
-    if (propSuppliers) {
+  // Sync props
+  React.useEffect(() => {
+    if (propSuppliers.length > 0) {
       setSuppliers(propSuppliers);
     }
   }, [propSuppliers]);
 
-  // 搜索处理
-  const handleSearch = useCallback(
-    (value: string) => {
-      setSearchValue(value);
-      if (fetchSuppliers) {
-        loadSuppliers(value);
-      }
-    },
-    [fetchSuppliers, loadSuppliers]
-  );
-
-  // 过滤供应商列表
+  // Filter suppliers
   const filteredSuppliers = suppliers.filter((supplier) => {
-    // 只显示启用的供应商
-    if (onlyActive && supplier.status !== 1) {
-      return false;
-    }
-    // 本地搜索过滤（如果没有远程搜索）
+    if (onlyActive && supplier.status !== 1) return false;
     if (!fetchSuppliers && searchValue) {
       const keyword = searchValue.toLowerCase();
       return (
@@ -130,94 +112,143 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     return true;
   });
 
-  // 渲染供应商选项
-  const renderOption = (supplier: SupplierOption) => {
-    const displayName = supplier.displayName || supplier.name;
-    const statusBadge =
-      showStatus && supplier.status !== 1 ? (
-        <Tag color="red" style={{ marginLeft: 8 }}>
-          已禁用
-        </Tag>
-      ) : null;
-
-    const minOrderInfo =
-      showMinOrder && supplier.minOrderAmount ? (
-        <span style={{ color: '#999', fontSize: 12, marginLeft: 8 }}>
-          起送¥{supplier.minOrderAmount}
-        </span>
-      ) : null;
-
-    return (
-      <Space>
-        <ShopOutlined />
-        <span>{displayName}</span>
-        {supplier.supplierNo && (
-          <span style={{ color: '#999', fontSize: 12 }}>({supplier.supplierNo})</span>
-        )}
-        {statusBadge}
-        {minOrderInfo}
-      </Space>
-    );
+  // Handle single select
+  const handleSingleSelect = (supplierId: string) => {
+    onChange?.(parseInt(supplierId));
+    setOpen(false);
   };
 
-  // 渲染选中标签
-  const tagRender = (props: {
-    label: React.ReactNode;
-    value: number;
-    closable: boolean;
-    onClose: () => void;
-  }) => {
-    const { label, closable, onClose } = props;
-    const supplier = suppliers.find((s) => s.id === props.value);
-    const isDisabled = supplier && supplier.status !== 1;
-
-    return (
-      <Tag
-        color={isDisabled ? 'red' : 'blue'}
-        closable={closable}
-        onClose={onClose}
-        style={{ marginRight: 3 }}
-      >
-        {label}
-      </Tag>
-    );
+  // Handle multi select toggle
+  const handleMultiSelectToggle = (supplierId: number) => {
+    const currentValues = (value as number[]) || [];
+    const newValues = currentValues.includes(supplierId)
+      ? currentValues.filter((id) => id !== supplierId)
+      : [...currentValues, supplierId];
+    onChange?.(newValues);
   };
 
-  // 选项列表
-  const options = filteredSuppliers.map((supplier) => ({
-    label: renderOption(supplier),
-    value: supplier.id,
-    disabled: onlyActive && supplier.status !== 1,
-    title: supplier.displayName || supplier.name,
-  }));
-
-  // 获取显示值
-  const getDisplayValue = () => {
+  // Get display label
+  const getDisplayLabel = () => {
+    if (!value) return placeholder;
     if (multiple) {
-      return value as number[] | undefined;
+      const selectedCount = (value as number[])?.length || 0;
+      if (selectedCount === 0) return placeholder;
+      return `已选择 ${selectedCount} 个供应商`;
     }
-    return value as number | undefined;
+    const supplier = suppliers.find((s) => s.id === value);
+    return supplier?.displayName || supplier?.name || placeholder;
   };
 
+  // Single select mode
+  if (!multiple) {
+    return (
+      <Select
+        value={value?.toString()}
+        onValueChange={handleSingleSelect}
+        disabled={disabled}
+      >
+        <SelectTrigger className={className}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {filteredSuppliers.map((supplier) => (
+            <SelectItem
+              key={supplier.id}
+              value={supplier.id.toString()}
+              disabled={onlyActive && supplier.status !== 1}
+            >
+              <div className="flex items-center gap-2">
+                <Store className="h-4 w-4 text-muted-foreground" />
+                <span>{supplier.displayName || supplier.name}</span>
+                {supplier.supplierNo && (
+                  <span className="text-xs text-muted-foreground">
+                    ({supplier.supplierNo})
+                  </span>
+                )}
+                {showStatus && supplier.status !== 1 && (
+                  <Badge variant="error" className="ml-1">
+                    已禁用
+                  </Badge>
+                )}
+                {showMinOrder && supplier.minOrderAmount && (
+                  <span className="text-xs text-muted-foreground ml-1">
+                    起送¥{supplier.minOrderAmount}
+                  </span>
+                )}
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  // Multiple select mode
   return (
-    <Select
-      showSearch
-      allowClear
-      mode={multiple ? 'multiple' : undefined}
-      placeholder={placeholder || (multiple ? '请选择供应商' : '请选择供应商')}
-      value={getDisplayValue()}
-      onChange={onChange}
-      onSearch={handleSearch}
-      loading={propLoading || loading}
-      disabled={disabled}
-      filterOption={!fetchSuppliers}
-      optionFilterProp="title"
-      options={options}
-      tagRender={multiple ? tagRender : undefined}
-      notFoundContent={loading ? '加载中...' : '暂无供应商'}
-      style={{ width: '100%' }}
-      {...restProps}
-    />
+    <div className={cn("relative", className)}>
+      <div
+        className={cn(
+          "flex min-h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer",
+          disabled && "cursor-not-allowed opacity-50"
+        )}
+        onClick={() => !disabled && setOpen(!open)}
+      >
+        <span className={!value || (value as number[]).length === 0 ? "text-muted-foreground" : ""}>
+          {getDisplayLabel()}
+        </span>
+        {(propLoading || loading) ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : null}
+      </div>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+          <div className="p-2 border-b">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="搜索供应商..."
+                value={searchValue}
+                onChange={(e) => {
+                  setSearchValue(e.target.value);
+                  if (fetchSuppliers) {
+                    loadSuppliers(e.target.value);
+                  }
+                }}
+                className="pl-8"
+              />
+            </div>
+          </div>
+          <ScrollArea className="max-h-[200px]">
+            {filteredSuppliers.map((supplier) => {
+              const isSelected = (value as number[])?.includes(supplier.id);
+              return (
+                <div
+                  key={supplier.id}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-accent",
+                    isSelected && "bg-accent"
+                  )}
+                  onClick={() => handleMultiSelectToggle(supplier.id)}
+                >
+                  <Checkbox checked={isSelected} />
+                  <Store className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1">{supplier.displayName || supplier.name}</span>
+                  {supplier.supplierNo && (
+                    <span className="text-xs text-muted-foreground">
+                      ({supplier.supplierNo})
+                    </span>
+                  )}
+                  {showStatus && supplier.status !== 1 && (
+                    <Badge variant="error">已禁用</Badge>
+                  )}
+                </div>
+              );
+            })}
+          </ScrollArea>
+        </div>
+      )}
+    </div>
   );
 };
 

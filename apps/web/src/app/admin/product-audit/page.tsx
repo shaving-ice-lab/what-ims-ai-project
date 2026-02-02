@@ -1,32 +1,35 @@
-'use client';
+"use client";
 
-import { CheckOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
+import { AdminLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DateRangePicker } from "@/components/ui/date-picker";
 import {
-  Badge,
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Image,
-  message,
-  Row,
-  Select,
-  Space,
-  Table,
-  Tag,
-  Typography,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { Dayjs } from 'dayjs';
-import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
-import AdminLayout from '../../../components/layouts/AdminLayout';
-
-const { Title, Paragraph } = Typography;
-const { RangePicker } = DatePicker;
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { showToast } from "@/lib/toast";
+import { Check, Eye, X } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+import type { DateRange } from "react-day-picker";
 
 interface ProductAuditItem {
-  key: string;
   id: number;
   name: string;
   brand: string;
@@ -36,317 +39,313 @@ interface ProductAuditItem {
   supplierName: string;
   image: string;
   submitTime: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   isNewBrand: boolean;
 }
 
 export default function ProductAuditPage() {
   const router = useRouter();
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRows, setSelectedRows] = React.useState<number[]>([]);
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
 
-  // 筛选条件
-  const [filterStatus, setFilterStatus] = useState<string | null>(null);
-  const [filterSupplier, setFilterSupplier] = useState<number | null>(null);
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  // Filters
+  const [filterStatus, setFilterStatus] = React.useState<string>("all");
+  const [filterSupplier, setFilterSupplier] = React.useState<string>("all");
 
-  // 供应商选项
   const supplierOptions = [
-    { value: 1, label: '生鲜供应商A' },
-    { value: 2, label: '粮油供应商B' },
-    { value: 3, label: '调味品供应商C' },
+    { value: "1", label: "生鲜供应商A" },
+    { value: "2", label: "粮油供应商B" },
+    { value: "3", label: "调味品供应商C" },
   ];
 
-  // 模拟产品数据
-  const [productData, setProductData] = useState<ProductAuditItem[]>([
+  const [productData, setProductData] = React.useState<ProductAuditItem[]>([
     {
-      key: '1',
       id: 1,
-      name: '金龙鱼大豆油',
-      brand: '金龙鱼',
-      spec: '5L/桶',
+      name: "金龙鱼大豆油",
+      brand: "金龙鱼",
+      spec: "5L/桶",
       price: 58.0,
       supplierId: 2,
-      supplierName: '粮油供应商B',
-      image: 'https://via.placeholder.com/80',
-      submitTime: '2024-01-29 10:30:00',
-      status: 'pending',
+      supplierName: "粮油供应商B",
+      image: "https://via.placeholder.com/80",
+      submitTime: "2024-01-29 10:30:00",
+      status: "pending",
       isNewBrand: false,
     },
     {
-      key: '2',
       id: 2,
-      name: '新品牌酱油',
-      brand: '新品牌',
-      spec: '500ml/瓶',
+      name: "新品牌酱油",
+      brand: "新品牌",
+      spec: "500ml/瓶",
       price: 15.0,
       supplierId: 3,
-      supplierName: '调味品供应商C',
-      image: 'https://via.placeholder.com/80',
-      submitTime: '2024-01-29 09:15:00',
-      status: 'pending',
+      supplierName: "调味品供应商C",
+      image: "https://via.placeholder.com/80",
+      submitTime: "2024-01-29 09:15:00",
+      status: "pending",
       isNewBrand: true,
     },
     {
-      key: '3',
       id: 3,
-      name: '福临门花生油',
-      brand: '福临门',
-      spec: '5L/桶',
+      name: "福临门花生油",
+      brand: "福临门",
+      spec: "5L/桶",
       price: 68.0,
       supplierId: 2,
-      supplierName: '粮油供应商B',
-      image: 'https://via.placeholder.com/80',
-      submitTime: '2024-01-28 16:20:00',
-      status: 'approved',
+      supplierName: "粮油供应商B",
+      image: "https://via.placeholder.com/80",
+      submitTime: "2024-01-28 16:20:00",
+      status: "approved",
       isNewBrand: false,
     },
     {
-      key: '4',
       id: 4,
-      name: '测试产品',
-      brand: '未知品牌',
-      spec: '规格不明',
+      name: "测试产品",
+      brand: "未知品牌",
+      spec: "规格不明",
       price: 999.0,
       supplierId: 1,
-      supplierName: '生鲜供应商A',
-      image: 'https://via.placeholder.com/80',
-      submitTime: '2024-01-28 14:10:00',
-      status: 'rejected',
+      supplierName: "生鲜供应商A",
+      image: "https://via.placeholder.com/80",
+      submitTime: "2024-01-28 14:10:00",
+      status: "rejected",
       isNewBrand: true,
     },
   ]);
 
-  // 待审核数量
-  const pendingCount = productData.filter((item) => item.status === 'pending').length;
+  const pendingCount = productData.filter((item) => item.status === "pending").length;
 
-  // 批量审核通过
   const handleBatchApprove = () => {
     setProductData((prev) =>
       prev.map((item) =>
-        selectedRowKeys.includes(item.key) ? { ...item, status: 'approved' as const } : item
+        selectedRows.includes(item.id) ? { ...item, status: "approved" as const } : item
       )
     );
-    setSelectedRowKeys([]);
-    message.success(`已批量通过 ${selectedRowKeys.length} 个产品`);
+    showToast.success(`已批量通过 ${selectedRows.length} 个产品`);
+    setSelectedRows([]);
   };
 
-  // 单个审核通过
   const handleApprove = (id: number) => {
     setProductData((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: 'approved' as const } : item))
+      prev.map((item) =>
+        item.id === id ? { ...item, status: "approved" as const } : item
+      )
     );
-    message.success('审核已通过');
+    showToast.success("审核已通过");
   };
 
-  // 单个审核驳回
   const handleReject = (id: number) => {
     setProductData((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: 'rejected' as const } : item))
+      prev.map((item) =>
+        item.id === id ? { ...item, status: "rejected" as const } : item
+      )
     );
-    message.success('已驳回');
+    showToast.success("已驳回");
   };
 
-  // 状态标签
-  const statusLabels: Record<string, { label: string; color: string }> = {
-    pending: { label: '待审核', color: 'warning' },
-    approved: { label: '已通过', color: 'success' },
-    rejected: { label: '已驳回', color: 'error' },
+  const statusConfig: Record<string, { label: string; variant: "warning" | "success" | "error" }> = {
+    pending: { label: "待审核", variant: "warning" },
+    approved: { label: "已通过", variant: "success" },
+    rejected: { label: "已驳回", variant: "error" },
   };
 
-  // 表格列定义
-  const columns: ColumnsType<ProductAuditItem> = [
-    {
-      title: '产品图片',
-      dataIndex: 'image',
-      key: 'image',
-      width: 100,
-      render: (src: string) => (
-        <Image
-          src={src}
-          alt="产品图片"
-          width={60}
-          height={60}
-          style={{ objectFit: 'cover', borderRadius: 4 }}
-          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        />
-      ),
-    },
-    {
-      title: '产品名称',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: '品牌',
-      dataIndex: 'brand',
-      key: 'brand',
-      render: (brand: string, record) => (
-        <Space>
-          {brand}
-          {record.isNewBrand && <Tag color="blue">新品牌</Tag>}
-        </Space>
-      ),
-    },
-    {
-      title: '规格',
-      dataIndex: 'spec',
-      key: 'spec',
-    },
-    {
-      title: '价格',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price: number) => `¥${price.toFixed(2)}`,
-    },
-    {
-      title: '供应商',
-      dataIndex: 'supplierName',
-      key: 'supplierName',
-    },
-    {
-      title: '提交时间',
-      dataIndex: 'submitTime',
-      key: 'submitTime',
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => {
-        const config = statusLabels[status];
-        return (
-          <Badge status={config?.color as 'warning' | 'success' | 'error'} text={config?.label} />
-        );
-      },
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => router.push(`/admin/product-audit/${record.id}`)}
-          >
-            详情
-          </Button>
-          {record.status === 'pending' && (
-            <>
-              <Button
-                type="link"
-                size="small"
-                icon={<CheckOutlined />}
-                style={{ color: '#52c41a' }}
-                onClick={() => handleApprove(record.id)}
-              >
-                通过
-              </Button>
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<CloseOutlined />}
-                onClick={() => handleReject(record.id)}
-              >
-                驳回
-              </Button>
-            </>
-          )}
-        </Space>
-      ),
-    },
-  ];
-
-  // 过滤数据
   const filteredData = productData.filter((item) => {
-    if (filterStatus && item.status !== filterStatus) return false;
-    if (filterSupplier && item.supplierId !== filterSupplier) return false;
+    if (filterStatus !== "all" && item.status !== filterStatus) return false;
+    if (filterSupplier !== "all" && item.supplierId.toString() !== filterSupplier) return false;
     return true;
   });
 
-  // 只能选择待审核的产品
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: setSelectedRowKeys,
-    getCheckboxProps: (record: ProductAuditItem) => ({
-      disabled: record.status !== 'pending',
-    }),
+  const pendingItems = filteredData.filter((item) => item.status === "pending");
+  const allPendingSelected =
+    pendingItems.length > 0 &&
+    pendingItems.every((item) => selectedRows.includes(item.id));
+
+  const toggleSelectAll = () => {
+    if (allPendingSelected) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(pendingItems.map((item) => item.id));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedRows((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   };
 
   return (
     <AdminLayout>
-      <div>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
-          <Col>
-            <Title level={3} style={{ margin: 0 }}>
-              产品审核
-              {pendingCount > 0 && <Badge count={pendingCount} style={{ marginLeft: 12 }} />}
-            </Title>
-            <Paragraph type="secondary" style={{ margin: 0 }}>
-              审核供应商提交的新产品信息
-            </Paragraph>
-          </Col>
-        </Row>
-
-        <Card>
-          {/* 筛选栏 */}
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col xs={24} sm={12} md={5}>
-              <Select
-                placeholder="状态筛选"
-                style={{ width: '100%' }}
-                options={[
-                  { value: null, label: '全部状态' },
-                  { value: 'pending', label: '待审核' },
-                  { value: 'approved', label: '已通过' },
-                  { value: 'rejected', label: '已驳回' },
-                ]}
-                value={filterStatus}
-                onChange={setFilterStatus}
-                allowClear
-              />
-            </Col>
-            <Col xs={24} sm={12} md={5}>
-              <Select
-                placeholder="供应商筛选"
-                style={{ width: '100%' }}
-                options={[{ value: null, label: '全部供应商' }, ...supplierOptions]}
-                value={filterSupplier}
-                onChange={setFilterSupplier}
-                allowClear
-              />
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <RangePicker
-                style={{ width: '100%' }}
-                value={dateRange}
-                onChange={(dates) => setDateRange(dates)}
-              />
-            </Col>
-            <Col xs={24} sm={12} md={6}>
-              {selectedRowKeys.length > 0 && (
-                <Button type="primary" onClick={handleBatchApprove}>
-                  批量通过 ({selectedRowKeys.length})
-                </Button>
-              )}
-            </Col>
-          </Row>
-
-          {/* 产品列表 */}
-          <Table
-            rowSelection={rowSelection}
-            dataSource={filteredData}
-            columns={columns}
-            pagination={{
-              total: filteredData.length,
-              pageSize: 10,
-              showTotal: (total) => `共 ${total} 条记录`,
-            }}
-          />
-        </Card>
-      </div>
+      <WorkbenchShell
+        badge="产品审核"
+        title="产品审核"
+        description="审核供应商提交的新产品信息"
+        actions={
+          selectedRows.length > 0 ? (
+            <Button onClick={handleBatchApprove}>
+              批量通过 ({selectedRows.length})
+            </Button>
+          ) : undefined
+        }
+        toolbar={
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span>待审核 {pendingCount} 项</span>
+            {pendingCount > 0 && <Badge variant="destructive">{pendingCount}</Badge>}
+          </div>
+        }
+        sidebar={
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">筛选条件</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="状态筛选" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部状态</SelectItem>
+                  <SelectItem value="pending">待审核</SelectItem>
+                  <SelectItem value="approved">已通过</SelectItem>
+                  <SelectItem value="rejected">已驳回</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterSupplier} onValueChange={setFilterSupplier}>
+                <SelectTrigger>
+                  <SelectValue placeholder="供应商筛选" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部供应商</SelectItem>
+                  {supplierOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+            </CardContent>
+          </Card>
+        }
+        results={
+          <Card>
+            <CardHeader className="bg-muted/20 border-b border-border/50">
+              <CardTitle className="text-sm font-medium">审核列表</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={allPendingSelected}
+                          onCheckedChange={toggleSelectAll}
+                          disabled={pendingItems.length === 0}
+                        />
+                      </TableHead>
+                      <TableHead>产品图片</TableHead>
+                      <TableHead>产品名称</TableHead>
+                      <TableHead>品牌</TableHead>
+                      <TableHead>规格</TableHead>
+                      <TableHead className="text-right">价格</TableHead>
+                      <TableHead>供应商</TableHead>
+                      <TableHead>提交时间</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead className="w-[180px]">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredData.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedRows.includes(item.id)}
+                            onCheckedChange={() => toggleSelect(item.id)}
+                            disabled={item.status !== "pending"}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-12 w-12 rounded bg-muted flex items-center justify-center overflow-hidden">
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              width={48}
+                              height={48}
+                              className="object-cover"
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {item.brand}
+                            {item.isNewBrand && (
+                              <Badge variant="secondary">新品牌</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{item.spec}</TableCell>
+                        <TableCell className="text-right">
+                          ¥{item.price.toFixed(2)}
+                        </TableCell>
+                        <TableCell>{item.supplierName}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {item.submitTime}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusConfig[item.status]?.variant}>
+                            {statusConfig[item.status]?.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/admin/product-audit/${item.id}`)
+                              }
+                            >
+                              <Eye className="mr-1 h-4 w-4" />
+                              详情
+                            </Button>
+                            {item.status === "pending" && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-[hsl(var(--success))]"
+                                  onClick={() => handleApprove(item.id)}
+                                >
+                                  <Check className="mr-1 h-4 w-4" />
+                                  通过
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive"
+                                  onClick={() => handleReject(item.id)}
+                                >
+                                  <X className="mr-1 h-4 w-4" />
+                                  驳回
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                <span>共 {filteredData.length} 条记录</span>
+              </div>
+            </CardContent>
+          </Card>
+        }
+      />
     </AdminLayout>
   );
 }

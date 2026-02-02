@@ -1,35 +1,35 @@
-'use client';
+"use client";
 
+import { AdminLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  DownloadOutlined,
-  ExclamationCircleOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { showToast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import {
-  Alert,
-  Button,
-  Card,
-  message,
-  Progress,
-  Result,
-  Space,
-  Table,
-  Tag,
-  Typography,
-  Upload,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { UploadFile } from 'antd/es/upload/interface';
-import { useState } from 'react';
-import AdminLayout from '../../../../components/layouts/AdminLayout';
-
-const { Title, Paragraph, Text } = Typography;
-const { Dragger } = Upload;
+    AlertCircle,
+    CheckCircle,
+    Download,
+    Info,
+    Upload,
+    XCircle
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import * as React from "react";
 
 interface ImportPreviewItem {
-  key: string;
+  id: string;
   rowNum: number;
   name: string;
   storeName: string | null;
@@ -37,337 +37,427 @@ interface ImportPreviewItem {
   materialName: string | null;
   markupType: string;
   markupValue: number;
-  status: 'valid' | 'error' | 'warning';
+  status: "valid" | "error" | "warning";
   errorMsg: string | null;
 }
 
-type ImportStep = 'upload' | 'preview' | 'importing' | 'result';
+type ImportStep = "upload" | "preview" | "importing" | "result";
 
 export default function MarkupImportPage() {
-  const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [previewData, setPreviewData] = useState<ImportPreviewItem[]>([]);
-  const [importProgress, setImportProgress] = useState(0);
-  const [importResult, setImportResult] = useState<{
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = React.useState<ImportStep>("upload");
+  const [previewData, setPreviewData] = React.useState<ImportPreviewItem[]>([]);
+  const [importProgress, setImportProgress] = React.useState(0);
+  const [importResult, setImportResult] = React.useState<{
     success: number;
     failed: number;
     total: number;
   } | null>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
 
-  // 模拟预览数据
   const mockPreviewData: ImportPreviewItem[] = [
     {
-      key: '1',
+      id: "1",
       rowNum: 2,
-      name: '默认加价规则',
+      name: "默认加价规则",
       storeName: null,
       supplierName: null,
       materialName: null,
-      markupType: '百分比',
+      markupType: "百分比",
       markupValue: 3,
-      status: 'valid',
+      status: "valid",
       errorMsg: null,
     },
     {
-      key: '2',
+      id: "2",
       rowNum: 3,
-      name: '生鲜供应商A固定加价',
+      name: "生鲜供应商A固定加价",
       storeName: null,
-      supplierName: '生鲜供应商A',
+      supplierName: "生鲜供应商A",
       materialName: null,
-      markupType: '固定金额',
+      markupType: "固定金额",
       markupValue: 2,
-      status: 'valid',
+      status: "valid",
       errorMsg: null,
     },
     {
-      key: '3',
+      id: "3",
       rowNum: 4,
-      name: '门店A专属规则',
-      storeName: '门店A - 朝阳店',
+      name: "门店A专属规则",
+      storeName: "门店A - 朝阳店",
       supplierName: null,
       materialName: null,
-      markupType: '百分比',
+      markupType: "百分比",
       markupValue: 2.5,
-      status: 'warning',
-      errorMsg: '已存在同名规则，将更新',
+      status: "warning",
+      errorMsg: "已存在同名规则，将更新",
     },
     {
-      key: '4',
+      id: "4",
       rowNum: 5,
-      name: '无效规则',
-      storeName: '不存在的门店',
+      name: "无效规则",
+      storeName: "不存在的门店",
       supplierName: null,
       materialName: null,
-      markupType: '百分比',
+      markupType: "百分比",
       markupValue: -1,
-      status: 'error',
-      errorMsg: '门店不存在；加价值不能为负数',
+      status: "error",
+      errorMsg: "门店不存在；加价值不能为负数",
     },
   ];
 
-  // 下载模板
   const handleDownloadTemplate = () => {
-    message.success('模板下载中...');
-    // 实际应调用API下载模板文件
+    showToast.success("模板下载中...");
   };
 
-  // 文件上传变化
-  const handleUploadChange = (info: { fileList: UploadFile[] }) => {
-    setFileList(info.fileList);
-    if (info.fileList.length > 0 && info.fileList[0]?.status === 'done') {
-      // 模拟解析文件
-      setPreviewData(mockPreviewData);
-      setCurrentStep('preview');
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFile(file);
     }
   };
 
-  // 确认导入
+  const handleFile = (_file: File) => {
+    // Simulate file parsing
+    setTimeout(() => {
+      setPreviewData(mockPreviewData);
+      setCurrentStep("preview");
+    }, 500);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFile(file);
+    }
+  };
+
   const handleConfirmImport = async () => {
-    const validItems = previewData.filter((item) => item.status !== 'error');
+    const validItems = previewData.filter((item) => item.status !== "error");
     if (validItems.length === 0) {
-      message.error('没有可导入的有效数据');
+      showToast.error("没有可导入的有效数据");
       return;
     }
 
-    setCurrentStep('importing');
+    setCurrentStep("importing");
 
-    // 模拟导入进度
     for (let i = 0; i <= 100; i += 10) {
       await new Promise((resolve) => setTimeout(resolve, 200));
       setImportProgress(i);
     }
 
-    // 模拟导入结果
     setImportResult({
       success: validItems.length,
       failed: previewData.length - validItems.length,
       total: previewData.length,
     });
-    setCurrentStep('result');
+    setCurrentStep("result");
   };
 
-  // 重新导入
   const handleReset = () => {
-    setCurrentStep('upload');
-    setFileList([]);
+    setCurrentStep("upload");
     setPreviewData([]);
     setImportProgress(0);
     setImportResult(null);
   };
 
-  // 预览表格列
-  const previewColumns: ColumnsType<ImportPreviewItem> = [
-    {
-      title: '行号',
-      dataIndex: 'rowNum',
-      key: 'rowNum',
-      width: 60,
-    },
-    {
-      title: '规则名称',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: '门店',
-      dataIndex: 'storeName',
-      key: 'storeName',
-      render: (name: string | null) => name || <Tag>全部</Tag>,
-    },
-    {
-      title: '供应商',
-      dataIndex: 'supplierName',
-      key: 'supplierName',
-      render: (name: string | null) => name || <Tag>全部</Tag>,
-    },
-    {
-      title: '物料',
-      dataIndex: 'materialName',
-      key: 'materialName',
-      render: (name: string | null) => name || <Tag>全部</Tag>,
-    },
-    {
-      title: '加价方式',
-      dataIndex: 'markupType',
-      key: 'markupType',
-    },
-    {
-      title: '加价值',
-      dataIndex: 'markupValue',
-      key: 'markupValue',
-    },
-    {
-      title: '校验结果',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string, record) => {
-        if (status === 'valid') {
-          return (
-            <Tag color="success" icon={<CheckCircleOutlined />}>
-              有效
-            </Tag>
-          );
-        }
-        if (status === 'warning') {
-          return (
-            <Space direction="vertical" size={0}>
-              <Tag color="warning" icon={<ExclamationCircleOutlined />}>
-                警告
-              </Tag>
-              <Text type="warning" style={{ fontSize: 12 }}>
-                {record.errorMsg}
-              </Text>
-            </Space>
-          );
-        }
-        return (
-          <Space direction="vertical" size={0}>
-            <Tag color="error" icon={<CloseCircleOutlined />}>
-              错误
-            </Tag>
-            <Text type="danger" style={{ fontSize: 12 }}>
-              {record.errorMsg}
-            </Text>
-          </Space>
-        );
-      },
-    },
-  ];
-
-  // 统计信息
-  const validCount = previewData.filter((item) => item.status === 'valid').length;
-  const warningCount = previewData.filter((item) => item.status === 'warning').length;
-  const errorCount = previewData.filter((item) => item.status === 'error').length;
+  const validCount = previewData.filter((item) => item.status === "valid").length;
+  const warningCount = previewData.filter((item) => item.status === "warning").length;
+  const errorCount = previewData.filter((item) => item.status === "error").length;
+  const stepLabel: Record<ImportStep, string> = {
+    upload: "上传文件",
+    preview: "数据预览",
+    importing: "导入中",
+    result: "导入结果",
+  };
 
   return (
     <AdminLayout>
-      <div>
-        <Title level={3}>批量导入加价规则</Title>
-        <Paragraph type="secondary">
-          通过Excel文件批量导入加价规则，请先下载模板并按格式填写
-        </Paragraph>
-
-        {/* 步骤1: 上传文件 */}
-        {currentStep === 'upload' && (
+      <WorkbenchShell
+        badge="批量导入"
+        title="批量导入加价规则"
+        description="通过Excel文件批量导入加价规则，请先下载模板并按格式填写"
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+              <Download className="mr-2 h-4 w-4" />
+              下载模板
+            </Button>
+            <Button size="sm" onClick={() => router.push("/admin/markup/rules")}>
+              查看规则
+            </Button>
+          </>
+        }
+        toolbar={
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <span>当前步骤：{stepLabel[currentStep]}</span>
+            {currentStep === "importing" && (
+              <span className="text-primary">进度 {importProgress}%</span>
+            )}
+          </div>
+        }
+        sidebar={
+          <>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">导入流程</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {[
+                  { key: "upload", label: "上传文件" },
+                  { key: "preview", label: "数据预览" },
+                  { key: "importing", label: "执行导入" },
+                  { key: "result", label: "导入结果" },
+                ].map((step) => (
+                  <div key={step.key} className="flex items-center justify-between">
+                    <span
+                      className={cn(
+                        "text-muted-foreground",
+                        currentStep === step.key && "text-foreground font-medium"
+                      )}
+                    >
+                      {step.label}
+                    </span>
+                    {currentStep === step.key && (
+                      <Badge variant="secondary" className="text-xs">当前</Badge>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">导入说明</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground space-y-2">
+                <p>请按照模板格式填写数据。</p>
+                <p>门店、供应商、物料列留空表示对全部生效。</p>
+                <p>加价方式可填写“固定金额”或“百分比”。</p>
+                <p>同名规则将被更新。</p>
+              </CardContent>
+            </Card>
+          </>
+        }
+      >
+        {currentStep === "upload" && (
           <Card>
-            <Space direction="vertical" style={{ width: '100%' }} size="large">
-              <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                下载导入模板
-              </Button>
-
-              <Dragger
-                name="file"
-                accept=".xlsx,.xls"
-                fileList={fileList}
-                onChange={handleUploadChange}
-                beforeUpload={() => false}
-                maxCount={1}
+            <CardContent className="pt-6 space-y-6">
+              <div
+                className={cn(
+                  "relative border-2 border-dashed rounded-lg p-12 text-center transition-colors",
+                  isDragging
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                )}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
               >
-                <p className="ant-upload-drag-icon">
-                  <UploadOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleFileSelect}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-sm font-medium">点击或拖拽文件到此区域上传</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  支持 .xlsx、.xls 格式的Excel文件
                 </p>
-                <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-                <p className="ant-upload-hint">支持 .xlsx、.xls 格式的Excel文件</p>
-              </Dragger>
+              </div>
 
-              <Alert
-                message="导入说明"
-                description={
-                  <ul style={{ paddingLeft: 20, margin: 0 }}>
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>导入说明</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
                     <li>请按照模板格式填写数据</li>
                     <li>门店、供应商、物料列留空表示对全部生效</li>
                     <li>加价方式可填写"固定金额"或"百分比"</li>
                     <li>同名规则将被更新</li>
                   </ul>
-                }
-                type="info"
-              />
-            </Space>
+                </AlertDescription>
+              </Alert>
+            </CardContent>
           </Card>
         )}
 
-        {/* 步骤2: 预览数据 */}
-        {currentStep === 'preview' && (
+        {currentStep === "preview" && (
           <Card>
-            <Space direction="vertical" style={{ width: '100%' }} size="middle">
-              <Alert
-                message={
-                  <Space>
-                    <span>数据校验结果：</span>
-                    <Tag color="success">有效 {validCount}</Tag>
-                    <Tag color="warning">警告 {warningCount}</Tag>
-                    <Tag color="error">错误 {errorCount}</Tag>
-                  </Space>
-                }
-                type={errorCount > 0 ? 'warning' : 'success'}
-              />
+            <CardContent className="pt-6 space-y-4">
+              <Alert variant={errorCount > 0 ? "warning" : "success"}>
+                <AlertDescription className="flex items-center gap-2">
+                  <span>数据校验结果：</span>
+                  <Badge variant="success">有效 {validCount}</Badge>
+                  <Badge variant="warning">警告 {warningCount}</Badge>
+                  <Badge variant="error">错误 {errorCount}</Badge>
+                </AlertDescription>
+              </Alert>
 
-              <Table
-                dataSource={previewData}
-                columns={previewColumns}
-                pagination={false}
-                size="small"
-                scroll={{ x: 900 }}
-              />
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16">行号</TableHead>
+                      <TableHead>规则名称</TableHead>
+                      <TableHead>门店</TableHead>
+                      <TableHead>供应商</TableHead>
+                      <TableHead>物料</TableHead>
+                      <TableHead>加价方式</TableHead>
+                      <TableHead>加价值</TableHead>
+                      <TableHead>校验结果</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewData.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.rowNum}</TableCell>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>
+                          {item.storeName || (
+                            <Badge variant="secondary">全部</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.supplierName || (
+                            <Badge variant="secondary">全部</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.materialName || (
+                            <Badge variant="secondary">全部</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{item.markupType}</TableCell>
+                        <TableCell>{item.markupValue}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {item.status === "valid" && (
+                              <Badge
+                                variant="success"
+                                className="flex items-center gap-1 w-fit"
+                              >
+                                <CheckCircle className="h-3 w-3" />
+                                有效
+                              </Badge>
+                            )}
+                            {item.status === "warning" && (
+                              <>
+                                <Badge
+                                  variant="warning"
+                                  className="flex items-center gap-1 w-fit"
+                                >
+                                  <AlertCircle className="h-3 w-3" />
+                                  警告
+                                </Badge>
+                                <p className="text-xs text-[hsl(var(--warning))]">
+                                  {item.errorMsg}
+                                </p>
+                              </>
+                            )}
+                            {item.status === "error" && (
+                              <>
+                                <Badge
+                                  variant="error"
+                                  className="flex items-center gap-1 w-fit"
+                                >
+                                  <XCircle className="h-3 w-3" />
+                                  错误
+                                </Badge>
+                                <p className="text-xs text-[hsl(var(--error))]">
+                                  {item.errorMsg}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-              <Space>
-                <Button onClick={handleReset}>重新上传</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleReset}>
+                  重新上传
+                </Button>
                 <Button
-                  type="primary"
                   onClick={handleConfirmImport}
                   disabled={validCount + warningCount === 0}
                 >
                   确认导入 ({validCount + warningCount} 条)
                 </Button>
-              </Space>
-            </Space>
-          </Card>
-        )}
-
-        {/* 步骤3: 导入中 */}
-        {currentStep === 'importing' && (
-          <Card>
-            <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <Progress type="circle" percent={importProgress} />
-              <div style={{ marginTop: 24 }}>
-                <Text>正在导入数据，请稍候...</Text>
               </div>
-            </div>
+            </CardContent>
           </Card>
         )}
 
-        {/* 步骤4: 导入结果 */}
-        {currentStep === 'result' && importResult && (
+        {currentStep === "importing" && (
           <Card>
-            <Result
-              status={importResult.failed > 0 ? 'warning' : 'success'}
-              title="导入完成"
-              subTitle={
-                <Space direction="vertical">
-                  <Text>共处理 {importResult.total} 条数据</Text>
-                  <Text type="success">成功导入 {importResult.success} 条</Text>
-                  {importResult.failed > 0 && (
-                    <Text type="danger">失败 {importResult.failed} 条</Text>
-                  )}
-                </Space>
-              }
-              extra={[
-                <Button key="again" onClick={handleReset}>
-                  继续导入
-                </Button>,
-                <Button
-                  key="list"
-                  type="primary"
-                  onClick={() => (window.location.href = '/admin/markup/rules')}
-                >
-                  查看规则列表
-                </Button>,
-              ]}
-            />
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="w-32 h-32 relative mb-6">
+                  <Progress value={importProgress} className="w-full" />
+                  <p className="text-center mt-2 text-2xl font-semibold">
+                    {importProgress}%
+                  </p>
+                </div>
+                <p className="text-muted-foreground">正在导入数据，请稍候...</p>
+              </div>
+            </CardContent>
           </Card>
         )}
-      </div>
+
+        {currentStep === "result" && importResult && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-12">
+                <div
+                  className={cn(
+                    "w-16 h-16 rounded-full flex items-center justify-center mb-6",
+                    importResult.failed > 0
+                      ? "bg-[hsl(var(--warning))]/10"
+                      : "bg-[hsl(var(--success))]/10"
+                  )}
+                >
+                  {importResult.failed > 0 ? (
+                    <AlertCircle className="h-8 w-8 text-[hsl(var(--warning))]" />
+                  ) : (
+                    <CheckCircle className="h-8 w-8 text-[hsl(var(--success))]" />
+                  )}
+                </div>
+                <h2 className="text-xl font-semibold mb-2">导入完成</h2>
+                <div className="space-y-1 text-center mb-6">
+                  <p className="text-muted-foreground">
+                    共处理 {importResult.total} 条数据
+                  </p>
+                  <p className="text-[hsl(var(--success))]">
+                    成功导入 {importResult.success} 条
+                  </p>
+                  {importResult.failed > 0 && (
+                    <p className="text-[hsl(var(--error))]">
+                      失败 {importResult.failed} 条
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleReset}>
+                    继续导入
+                  </Button>
+                  <Button onClick={() => router.push("/admin/markup/rules")}>
+                    查看规则列表
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </WorkbenchShell>
     </AdminLayout>
   );
 }

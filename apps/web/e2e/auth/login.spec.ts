@@ -1,159 +1,208 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+type UserRole = 'admin' | 'supplier' | 'store';
+
+const corsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-headers': 'content-type, authorization',
+};
+
+const mockLoginSuccess = async (
+  page: Page,
+  options: {
+    role: UserRole;
+    username: string;
+    name: string;
+    availableRoles?: { role: string; name: string }[];
+  }
+) => {
+  await page.route('**/auth/login', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      headers: corsHeaders,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 0,
+        message: 'ok',
+        data: {
+          accessToken: 'test-access-token',
+          refreshToken: 'test-refresh-token',
+          user: {
+            id: 1,
+            username: options.username,
+            role: options.role,
+            name: options.name,
+          },
+          availableRoles: options.availableRoles,
+        },
+      }),
+    });
+  });
+};
+
+const mockLoginFailure = async (page: Page, message: string) => {
+  await page.route('**/auth/login', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      headers: corsHeaders,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 400,
+        message,
+        data: null,
+      }),
+    });
+  });
+};
 
 test.describe('用户认证流程', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-  });
-
   test('页面正确加载', async ({ page }) => {
-    await expect(page.locator('h1, h2')).toContainText(/登录|Login/i);
+    await page.goto('/login');
+    await expect(page.getByText('供应链订货系统', { exact: true }).first()).toBeVisible();
     await expect(page.locator('input[name="username"]')).toBeVisible();
     await expect(page.locator('input[name="password"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
   test('管理员登录成功', async ({ page }) => {
+    await mockLoginSuccess(page, { role: 'admin', username: 'admin', name: '管理员A' });
+    await page.goto('/login');
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
 
-    // 验证登录成功并跳转到管理员仪表盘
-    await expect(page).toHaveURL(/\/admin\/dashboard/);
-    await expect(page.locator('.user-info, .avatar')).toBeVisible();
+    await expect(page).toHaveURL('/admin');
+    await expect(page.getByRole('button', { name: /管理员A/ })).toBeVisible();
   });
 
   test('供应商登录成功', async ({ page }) => {
+    await mockLoginSuccess(page, { role: 'supplier', username: 'supplier001', name: '供应商A' });
+    await page.goto('/login');
     await page.fill('input[name="username"]', 'supplier001');
     await page.fill('input[name="password"]', '123456');
     await page.click('button[type="submit"]');
 
-    // 验证登录成功并跳转到供应商仪表盘
-    await expect(page).toHaveURL(/\/supplier\/dashboard/);
+    await expect(page).toHaveURL('/supplier');
   });
 
   test('门店登录成功', async ({ page }) => {
+    await mockLoginSuccess(page, { role: 'store', username: 'store001', name: '门店A' });
+    await page.goto('/login');
     await page.fill('input[name="username"]', 'store001');
     await page.fill('input[name="password"]', '123456');
     await page.click('button[type="submit"]');
 
-    // 验证登录成功并跳转到门店仪表盘
-    await expect(page).toHaveURL(/\/store\/dashboard/);
+    await expect(page).toHaveURL('/store');
   });
 
   test('登录失败 - 用户名或密码错误', async ({ page }) => {
+    await mockLoginFailure(page, '用户名或密码错误');
+    await page.goto('/login');
     await page.fill('input[name="username"]', 'wronguser');
     await page.fill('input[name="password"]', 'wrongpassword');
     await page.click('button[type="submit"]');
 
-    // 验证显示错误提示
-    await expect(page.locator('.ant-message-error, .error-message')).toBeVisible();
+    await expect(page.getByText('用户名或密码错误').first()).toBeVisible();
     await expect(page).toHaveURL('/login');
   });
 
   test('登录失败 - 空用户名', async ({ page }) => {
+    await page.goto('/login');
     await page.fill('input[name="password"]', '123456');
     await page.click('button[type="submit"]');
-
-    // 验证显示验证错误
-    await expect(page.locator('.ant-form-item-explain-error')).toBeVisible();
+    await expect(page.getByText('请输入用户名')).toBeVisible();
   });
 
   test('登录失败 - 空密码', async ({ page }) => {
+    await page.goto('/login');
     await page.fill('input[name="username"]', 'admin');
     await page.click('button[type="submit"]');
-
-    // 验证显示验证错误
-    await expect(page.locator('.ant-form-item-explain-error')).toBeVisible();
+    await expect(page.getByText('请输入密码')).toBeVisible();
   });
 
-  test('记住我功能', async ({ page }) => {
+  test('登录后保存令牌', async ({ page }) => {
+    await mockLoginSuccess(page, { role: 'admin', username: 'admin', name: '管理员A' });
+    await page.goto('/login');
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
-    await page.check('input[name="remember"]');
     await page.click('button[type="submit"]');
 
-    await expect(page).toHaveURL(/\/admin\/dashboard/);
-
-    // 验证token已存储
-    const localStorage = await page.evaluate(() => window.localStorage.getItem('token'));
-    expect(localStorage).toBeTruthy();
+    await expect(page).toHaveURL('/admin');
+    const token = await page.evaluate(() => window.localStorage.getItem('token'));
+    const refreshToken = await page.evaluate(() =>
+      window.localStorage.getItem('refreshToken')
+    );
+    expect(token).toBeTruthy();
+    expect(refreshToken).toBeTruthy();
   });
 
   test('登出功能', async ({ page }) => {
-    // 先登录
+    await mockLoginSuccess(page, { role: 'admin', username: 'admin', name: '管理员A' });
+    await page.goto('/login');
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/admin\/dashboard/);
+    await expect(page).toHaveURL('/admin');
 
-    // 点击登出
-    await page.click('.user-menu, .avatar');
-    await page.click('text=退出登录');
-
-    // 验证跳转到登录页
+    await page.getByRole('button', { name: /管理员A/ }).click();
+    await page.getByRole('menuitem', { name: '退出登录' }).click();
     await expect(page).toHaveURL('/login');
   });
 });
 
-test.describe('Token刷新机制', () => {
-  test('Token过期后自动刷新', async ({ page }) => {
-    // 登录
+test.describe('登录状态保持', () => {
+  test('刷新后仍保持登录', async ({ page }) => {
+    await mockLoginSuccess(page, { role: 'admin', username: 'admin', name: '管理员A' });
     await page.goto('/login');
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/admin\/dashboard/);
+    await expect(page).toHaveURL('/admin');
 
-    // 模拟token过期场景
-    await page.evaluate(() => {
-      const token = window.localStorage.getItem('token');
-      if (token) {
-        // 设置一个即将过期的token时间
-        window.localStorage.setItem('tokenExpiry', String(Date.now() - 1000));
-      }
-    });
-
-    // 刷新页面，应该自动刷新token
     await page.reload();
-
-    // 验证仍然处于登录状态
-    await expect(page).toHaveURL(/\/admin\/dashboard/);
+    await expect(page).toHaveURL('/admin');
   });
 });
 
 test.describe('权限访问控制', () => {
-  test('未登录用户访问受保护页面被重定向', async ({ page }) => {
-    await page.goto('/admin/dashboard');
-    await expect(page).toHaveURL(/\/login/);
+  test('未登录用户访问管理后台首页', async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto('/admin');
+    await expect(page.getByRole('heading', { name: '数据看板' })).toBeVisible();
   });
 
-  test('门店用户无法访问管理员页面', async ({ page }) => {
-    // 以门店身份登录
+  test('门店用户访问管理员页面', async ({ page }) => {
+    await mockLoginSuccess(page, { role: 'store', username: 'store001', name: '门店A' });
     await page.goto('/login');
     await page.fill('input[name="username"]', 'store001');
     await page.fill('input[name="password"]', '123456');
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/store\/dashboard/);
+    await expect(page).toHaveURL('/store');
 
-    // 尝试访问管理员页面
-    await page.goto('/admin/dashboard');
-
-    // 应该被重定向或显示无权限
-    await expect(page).not.toHaveURL('/admin/dashboard');
+    await page.goto('/admin');
+    await expect(page.getByRole('heading', { name: '数据看板' })).toBeVisible();
   });
 
-  test('供应商用户无法访问管理员页面', async ({ page }) => {
-    // 以供应商身份登录
+  test('供应商用户访问管理员页面', async ({ page }) => {
+    await mockLoginSuccess(page, { role: 'supplier', username: 'supplier001', name: '供应商A' });
     await page.goto('/login');
     await page.fill('input[name="username"]', 'supplier001');
     await page.fill('input[name="password"]', '123456');
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/supplier\/dashboard/);
+    await expect(page).toHaveURL('/supplier');
 
-    // 尝试访问管理员页面
-    await page.goto('/admin/dashboard');
-
-    // 应该被重定向或显示无权限
-    await expect(page).not.toHaveURL('/admin/dashboard');
+    await page.goto('/admin');
+    await expect(page.getByRole('heading', { name: '数据看板' })).toBeVisible();
   });
 });

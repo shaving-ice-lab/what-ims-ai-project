@@ -1,18 +1,25 @@
-'use client';
+"use client";
 
-import { Column } from '@ant-design/charts';
-import { FallOutlined, RiseOutlined } from '@ant-design/icons';
-import { Card, Col, DatePicker, Row, Space, Statistic, Table, Tag, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { Dayjs } from 'dayjs';
-import { useState } from 'react';
-import AdminLayout from '../../../../components/layouts/AdminLayout';
-
-const { Title, Paragraph } = Typography;
-const { RangePicker } = DatePicker;
+import { BarChart } from "@/components/business/charts";
+import { StatCard, StatGrid } from "@/components/business/stat-card";
+import { AdminLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateRangePicker } from "@/components/ui/date-picker";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Calendar, DollarSign, TrendingDown, TrendingUp } from "lucide-react";
+import * as React from "react";
+import type { DateRange } from "react-day-picker";
 
 interface RankChangeItem {
-  key: string;
   rank: number;
   name: string;
   amount: number;
@@ -20,39 +27,31 @@ interface RankChangeItem {
 }
 
 export default function AnalysisPage() {
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
 
-  // 模拟同比环比数据
   const comparisonData = [
-    { period: '1月', type: '本期', value: 125000 },
-    { period: '1月', type: '上期', value: 110000 },
-    { period: '2月', type: '本期', value: 138000 },
-    { period: '2月', type: '上期', value: 125000 },
-    { period: '3月', type: '本期', value: 145000 },
-    { period: '3月', type: '上期', value: 138000 },
-    { period: '4月', type: '本期', value: 152000 },
-    { period: '4月', type: '上期', value: 145000 },
+    { name: "1月", 本期: 125000, 上期: 110000 },
+    { name: "2月", 本期: 138000, 上期: 125000 },
+    { name: "3月", 本期: 145000, 上期: 138000 },
+    { name: "4月", 本期: 152000, 上期: 145000 },
   ];
 
-  // 模拟门店排名变化
   const storeRankData: RankChangeItem[] = [
-    { key: '1', rank: 1, name: '门店A - 朝阳店', amount: 45680, change: 0 },
-    { key: '2', rank: 2, name: '门店C - 西城店', amount: 38500, change: 1 },
-    { key: '3', rank: 3, name: '门店B - 海淀店', amount: 28900, change: -1 },
-    { key: '4', rank: 4, name: '门店D - 东城店', amount: 21300, change: 2 },
-    { key: '5', rank: 5, name: '门店E - 丰台店', amount: 15600, change: -1 },
+    { rank: 1, name: "门店A - 朝阳店", amount: 45680, change: 0 },
+    { rank: 2, name: "门店C - 西城店", amount: 38500, change: 1 },
+    { rank: 3, name: "门店B - 海淀店", amount: 28900, change: -1 },
+    { rank: 4, name: "门店D - 东城店", amount: 21300, change: 2 },
+    { rank: 5, name: "门店E - 丰台店", amount: 15600, change: -1 },
   ];
 
-  // 模拟供应商排名变化
   const supplierRankData: RankChangeItem[] = [
-    { key: '1', rank: 1, name: '生鲜供应商A', amount: 68900, change: 0 },
-    { key: '2', rank: 2, name: '粮油供应商B', amount: 45600, change: 1 },
-    { key: '3', rank: 3, name: '调味品供应商C', amount: 23400, change: -1 },
-    { key: '4', rank: 4, name: '冷冻食品供应商D', amount: 19800, change: 0 },
-    { key: '5', rank: 5, name: '饮料供应商E', amount: 12300, change: 2 },
+    { rank: 1, name: "生鲜供应商A", amount: 68900, change: 0 },
+    { rank: 2, name: "粮油供应商B", amount: 45600, change: 1 },
+    { rank: 3, name: "调味品供应商C", amount: 23400, change: -1 },
+    { rank: 4, name: "冷冻食品供应商D", amount: 19800, change: 0 },
+    { rank: 5, name: "饮料供应商E", amount: 12300, change: 2 },
   ];
 
-  // 统计数据
   const statsData = {
     currentPeriod: 560000,
     lastPeriod: 518000,
@@ -60,147 +59,173 @@ export default function AnalysisPage() {
     momGrowth: 5.2,
   };
 
-  // 柱状图配置
-  const columnConfig = {
-    data: comparisonData,
-    isGroup: true,
-    xField: 'period',
-    yField: 'value',
-    seriesField: 'type',
-    height: 300,
-    yAxis: {
-      label: {
-        formatter: (v: string) => `¥${(Number(v) / 1000).toFixed(0)}k`,
-      },
-    },
-    tooltip: {
-      formatter: (datum: { type: string; value: number }) => ({
-        name: datum.type,
-        value: `¥${datum.value.toLocaleString()}`,
-      }),
-    },
+  const RankChangeCell = ({ change }: { change: number }) => {
+    if (change === 0) return <Badge variant="secondary">-</Badge>;
+    if (change > 0) {
+      return (
+        <Badge variant="success" className="flex items-center gap-1">
+          <TrendingUp className="h-3 w-3" /> 上升{change}位
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="error" className="flex items-center gap-1">
+        <TrendingDown className="h-3 w-3" /> 下降{Math.abs(change)}位
+      </Badge>
+    );
   };
-
-  // 排名变化表格列
-  const rankColumns: ColumnsType<RankChangeItem> = [
-    {
-      title: '排名',
-      dataIndex: 'rank',
-      key: 'rank',
-      width: 60,
-    },
-    {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: '金额',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (amount: number) => `¥${amount.toLocaleString()}`,
-    },
-    {
-      title: '排名变化',
-      dataIndex: 'change',
-      key: 'change',
-      render: (change: number) => {
-        if (change === 0) return <Tag>-</Tag>;
-        if (change > 0) {
-          return (
-            <Tag color="green">
-              <RiseOutlined /> 上升{change}位
-            </Tag>
-          );
-        }
-        return (
-          <Tag color="red">
-            <FallOutlined /> 下降{Math.abs(change)}位
-          </Tag>
-        );
-      },
-    },
-  ];
 
   return (
     <AdminLayout>
-      <div>
-        <Title level={3}>对比分析</Title>
-        <Paragraph type="secondary">查看同比、环比数据分析和排名变化</Paragraph>
+      <WorkbenchShell
+        badge="对比分析"
+        title="对比分析"
+        description="查看同比、环比数据分析和排名变化"
+        toolbar={
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span>选择时间范围</span>
+            <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+          </div>
+        }
+        sidebar={
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">增长概览</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">本期销售额</span>
+                <span className="font-semibold">¥{statsData.currentPeriod.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">上期销售额</span>
+                <span className="font-semibold">¥{statsData.lastPeriod.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">同比增长</span>
+                <span className="font-semibold text-[hsl(var(--success))]">
+                  {statsData.yoyGrowth}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">环比增长</span>
+                <span className="font-semibold text-[hsl(var(--success))]">
+                  {statsData.momGrowth}%
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        }
+        results={
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">门店订货排名变化</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16">排名</TableHead>
+                      <TableHead>名称</TableHead>
+                      <TableHead className="text-right">金额</TableHead>
+                      <TableHead className="w-32">排名变化</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {storeRankData.map((item) => (
+                      <TableRow key={item.rank}>
+                        <TableCell className="font-medium">{item.rank}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell className="text-right">
+                          ¥{item.amount.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <RankChangeCell change={item.change} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
 
-        {/* 时间选择 */}
-        <Card style={{ marginBottom: 24 }}>
-          <Space>
-            <span>选择时间范围：</span>
-            <RangePicker value={dateRange} onChange={(dates) => setDateRange(dates)} />
-          </Space>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">供应商销售排名变化</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16">排名</TableHead>
+                      <TableHead>名称</TableHead>
+                      <TableHead className="text-right">金额</TableHead>
+                      <TableHead className="w-32">排名变化</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {supplierRankData.map((item) => (
+                      <TableRow key={item.rank}>
+                        <TableCell className="font-medium">{item.rank}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell className="text-right">
+                          ¥{item.amount.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <RankChangeCell change={item.change} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        }
+      >
+        <StatGrid columns={4}>
+          <StatCard
+            title="本期销售额"
+            value={`¥${statsData.currentPeriod.toLocaleString()}`}
+            icon={DollarSign}
+          />
+          <StatCard
+            title="上期销售额"
+            value={`¥${statsData.lastPeriod.toLocaleString()}`}
+            icon={Calendar}
+          />
+          <StatCard
+            title="同比增长"
+            value={`${statsData.yoyGrowth}%`}
+            icon={TrendingUp}
+            valueClassName="text-[hsl(var(--success))]"
+          />
+          <StatCard
+            title="环比增长"
+            value={`${statsData.momGrowth}%`}
+            icon={TrendingUp}
+            valueClassName="text-[hsl(var(--success))]"
+          />
+        </StatGrid>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">同比/环比分析</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BarChart
+              data={comparisonData}
+              xKey="name"
+              yKeys={[
+                { key: "本期", name: "本期", color: "hsl(var(--chart-1))" },
+                { key: "上期", name: "上期", color: "hsl(var(--chart-2))" },
+              ]}
+              height={300}
+            />
+          </CardContent>
         </Card>
-
-        {/* 统计卡片 */}
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              <Statistic title="本期销售额" value={statsData.currentPeriod} prefix="¥" />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              <Statistic title="上期销售额" value={statsData.lastPeriod} prefix="¥" />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              <Statistic
-                title="同比增长"
-                value={statsData.yoyGrowth}
-                suffix="%"
-                valueStyle={{ color: '#52c41a' }}
-                prefix={<RiseOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={12} sm={6}>
-            <Card size="small">
-              <Statistic
-                title="环比增长"
-                value={statsData.momGrowth}
-                suffix="%"
-                valueStyle={{ color: '#52c41a' }}
-                prefix={<RiseOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        {/* 同比环比图表 */}
-        <Card title="同比/环比分析" style={{ marginBottom: 24 }}>
-          <Column {...columnConfig} />
-        </Card>
-
-        {/* 排名变化 */}
-        <Row gutter={16}>
-          <Col xs={24} lg={12}>
-            <Card title="门店订货排名变化">
-              <Table
-                dataSource={storeRankData}
-                columns={rankColumns}
-                pagination={false}
-                size="small"
-              />
-            </Card>
-          </Col>
-          <Col xs={24} lg={12}>
-            <Card title="供应商销售排名变化">
-              <Table
-                dataSource={supplierRankData}
-                columns={rankColumns}
-                pagination={false}
-                size="small"
-              />
-            </Card>
-          </Col>
-        </Row>
-      </div>
+      </WorkbenchShell>
     </AdminLayout>
   );
 }

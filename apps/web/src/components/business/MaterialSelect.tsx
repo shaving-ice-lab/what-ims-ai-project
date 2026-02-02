@@ -1,127 +1,97 @@
-'use client';
+"use client";
 
 /**
  * MaterialSelect - 物料选择组件
  * 弹窗选择器，支持分类树筛选、物料搜索、已选物料列表、多选
  */
 
-import { DeleteOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import type { TableColumnsType, TreeDataNode } from 'antd';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Button,
-  Col,
-  Empty,
-  Input,
-  Modal,
-  Row,
-  Space,
-  Spin,
-  Table,
-  Tag,
-  Tree,
-  Typography,
-} from 'antd';
-import Image from 'next/image';
-import React, { useCallback, useEffect, useState } from 'react';
-
-const { Text } = Typography;
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import { Folder, Plus, Search, Trash2 } from "lucide-react";
+import Image from "next/image";
+import * as React from "react";
 
 export interface MaterialOption {
-  /** 物料ID */
   id: number;
-  /** 物料名称 */
   name: string;
-  /** 物料编号 */
   materialNo?: string;
-  /** 分类ID */
   categoryId?: number;
-  /** 分类名称 */
   categoryName?: string;
-  /** 品牌 */
   brand?: string;
-  /** 规格 */
   spec?: string;
-  /** 单位 */
   unit?: string;
-  /** 图片URL */
   imageUrl?: string;
-  /** 状态：1-启用，0-禁用 */
   status: number;
 }
 
 export interface CategoryTreeNode {
-  /** 分类ID */
   id: number;
-  /** 分类名称 */
   name: string;
-  /** 子分类 */
   children?: CategoryTreeNode[];
 }
 
 export interface MaterialSelectProps {
-  /** 物料列表数据 */
   materials?: MaterialOption[];
-  /** 远程加载物料数据的函数 */
   fetchMaterials?: (params?: {
     keyword?: string;
     categoryId?: number;
   }) => Promise<MaterialOption[]>;
-  /** 分类树数据 */
   categoryTree?: CategoryTreeNode[];
-  /** 远程加载分类树的函数 */
   fetchCategories?: () => Promise<CategoryTreeNode[]>;
-  /** 选中的物料ID列表 */
   value?: number[];
-  /** 选中变化回调 */
   onChange?: (value: number[], selectedMaterials: MaterialOption[]) => void;
-  /** 是否多选模式 */
   multiple?: boolean;
-  /** 最大选择数量 */
   maxCount?: number;
-  /** 触发器按钮文本 */
   triggerText?: string;
-  /** 弹窗标题 */
   modalTitle?: string;
-  /** 是否禁用 */
   disabled?: boolean;
-  /** 是否只显示启用的物料 */
   onlyActive?: boolean;
 }
 
 const MaterialSelect: React.FC<MaterialSelectProps> = ({
-  materials: propMaterials,
+  materials: propMaterials = [],
   fetchMaterials,
-  categoryTree: propCategoryTree,
+  categoryTree: propCategoryTree = [],
   fetchCategories,
   value = [],
   onChange,
   multiple = true,
   maxCount,
-  triggerText = '选择物料',
-  modalTitle = '选择物料',
+  triggerText = "选择物料",
+  modalTitle = "选择物料",
   disabled = false,
   onlyActive = true,
 }) => {
-  const [visible, setVisible] = useState(false);
-  const [materials, setMaterials] = useState<MaterialOption[]>(propMaterials || []);
-  const [categoryTree, setCategoryTree] = useState<CategoryTreeNode[]>(propCategoryTree || []);
-  const [loading, setLoading] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
-  const [selectedIds, setSelectedIds] = useState<number[]>(value);
-  const [selectedMaterials, setSelectedMaterials] = useState<MaterialOption[]>([]);
+  const [open, setOpen] = React.useState(false);
+  const [materials, setMaterials] = React.useState<MaterialOption[]>(propMaterials);
+  const [categoryTree, setCategoryTree] = React.useState<CategoryTreeNode[]>(propCategoryTree);
+  const [loading, setLoading] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = React.useState<number | undefined>();
+  const [selectedIds, setSelectedIds] = React.useState<number[]>(value);
+  const [selectedMaterials, setSelectedMaterials] = React.useState<MaterialOption[]>([]);
 
-  // 转换分类树为Tree组件格式
-  const convertToTreeData = (nodes: CategoryTreeNode[]): TreeDataNode[] => {
-    return nodes.map((node) => ({
-      key: node.id,
-      title: node.name,
-      children: node.children ? convertToTreeData(node.children) : undefined,
-    }));
-  };
-
-  // 加载物料数据
-  const loadMaterials = useCallback(
+  // Load materials
+  const loadMaterials = React.useCallback(
     async (params?: { keyword?: string; categoryId?: number }) => {
       if (fetchMaterials) {
         setLoading(true);
@@ -129,7 +99,7 @@ const MaterialSelect: React.FC<MaterialSelectProps> = ({
           const data = await fetchMaterials(params);
           setMaterials(data);
         } catch (error) {
-          console.error('加载物料数据失败:', error);
+          console.error("加载物料数据失败:", error);
         } finally {
           setLoading(false);
         }
@@ -138,21 +108,21 @@ const MaterialSelect: React.FC<MaterialSelectProps> = ({
     [fetchMaterials]
   );
 
-  // 加载分类数据
-  const loadCategories = useCallback(async () => {
+  // Load categories
+  const loadCategories = React.useCallback(async () => {
     if (fetchCategories) {
       try {
         const data = await fetchCategories();
         setCategoryTree(data);
       } catch (error) {
-        console.error('加载分类数据失败:', error);
+        console.error("加载分类数据失败:", error);
       }
     }
   }, [fetchCategories]);
 
-  // 初始化
-  useEffect(() => {
-    if (visible) {
+  // Initialize on open
+  React.useEffect(() => {
+    if (open) {
       if (fetchMaterials && materials.length === 0) {
         loadMaterials();
       }
@@ -160,46 +130,24 @@ const MaterialSelect: React.FC<MaterialSelectProps> = ({
         loadCategories();
       }
       setSelectedIds(value);
-      // 初始化已选物料
       const selected = materials.filter((m) => value.includes(m.id));
       setSelectedMaterials(selected);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, value]);
+  }, [open, value, fetchMaterials, fetchCategories, materials, categoryTree, loadMaterials, loadCategories]);
 
-  // 使用props传入的数据
-  useEffect(() => {
-    if (propMaterials) setMaterials(propMaterials);
+  // Sync props
+  React.useEffect(() => {
+    if (propMaterials.length > 0) setMaterials(propMaterials);
   }, [propMaterials]);
 
-  useEffect(() => {
-    if (propCategoryTree) setCategoryTree(propCategoryTree);
+  React.useEffect(() => {
+    if (propCategoryTree.length > 0) setCategoryTree(propCategoryTree);
   }, [propCategoryTree]);
 
-  // 搜索处理
-  const handleSearch = useCallback(() => {
-    if (fetchMaterials) {
-      loadMaterials({ keyword: searchValue, categoryId: selectedCategoryId });
-    }
-  }, [fetchMaterials, loadMaterials, searchValue, selectedCategoryId]);
-
-  // 分类选择
-  const handleCategorySelect = useCallback(
-    (selectedKeys: React.Key[]) => {
-      const categoryId = selectedKeys[0] as number | undefined;
-      setSelectedCategoryId(categoryId);
-      if (fetchMaterials) {
-        loadMaterials({ keyword: searchValue, categoryId });
-      }
-    },
-    [fetchMaterials, loadMaterials, searchValue]
-  );
-
-  // 过滤物料列表
+  // Filter materials
   const filteredMaterials = materials.filter((material) => {
     if (onlyActive && material.status !== 1) return false;
     if (!fetchMaterials) {
-      // 本地搜索
       if (searchValue) {
         const keyword = searchValue.toLowerCase();
         const matches =
@@ -207,7 +155,6 @@ const MaterialSelect: React.FC<MaterialSelectProps> = ({
           material.materialNo?.toLowerCase().includes(keyword);
         if (!matches) return false;
       }
-      // 本地分类筛选
       if (selectedCategoryId && material.categoryId !== selectedCategoryId) {
         return false;
       }
@@ -215,247 +162,250 @@ const MaterialSelect: React.FC<MaterialSelectProps> = ({
     return true;
   });
 
-  // 选择/取消选择物料
-  const handleSelectMaterial = useCallback(
-    (material: MaterialOption) => {
-      let newSelectedIds: number[];
-      let newSelectedMaterials: MaterialOption[];
+  // Select/deselect material
+  const handleSelectMaterial = (material: MaterialOption) => {
+    let newSelectedIds: number[];
+    let newSelectedMaterials: MaterialOption[];
 
-      if (selectedIds.includes(material.id)) {
-        // 取消选择
-        newSelectedIds = selectedIds.filter((id) => id !== material.id);
-        newSelectedMaterials = selectedMaterials.filter((m) => m.id !== material.id);
+    if (selectedIds.includes(material.id)) {
+      newSelectedIds = selectedIds.filter((id) => id !== material.id);
+      newSelectedMaterials = selectedMaterials.filter((m) => m.id !== material.id);
+    } else {
+      if (!multiple) {
+        newSelectedIds = [material.id];
+        newSelectedMaterials = [material];
+      } else if (maxCount && selectedIds.length >= maxCount) {
+        return;
       } else {
-        // 选择
-        if (!multiple) {
-          newSelectedIds = [material.id];
-          newSelectedMaterials = [material];
-        } else if (maxCount && selectedIds.length >= maxCount) {
-          return; // 已达到最大数量
-        } else {
-          newSelectedIds = [...selectedIds, material.id];
-          newSelectedMaterials = [...selectedMaterials, material];
-        }
+        newSelectedIds = [...selectedIds, material.id];
+        newSelectedMaterials = [...selectedMaterials, material];
       }
-
-      setSelectedIds(newSelectedIds);
-      setSelectedMaterials(newSelectedMaterials);
-    },
-    [selectedIds, selectedMaterials, multiple, maxCount]
-  );
-
-  // 移除已选物料
-  const handleRemoveMaterial = useCallback(
-    (materialId: number) => {
-      setSelectedIds(selectedIds.filter((id) => id !== materialId));
-      setSelectedMaterials(selectedMaterials.filter((m) => m.id !== materialId));
-    },
-    [selectedIds, selectedMaterials]
-  );
-
-  // 确认选择
-  const handleConfirm = useCallback(() => {
-    onChange?.(selectedIds, selectedMaterials);
-    setVisible(false);
-  }, [onChange, selectedIds, selectedMaterials]);
-
-  // 取消选择
-  const handleCancel = useCallback(() => {
-    setSelectedIds(value);
-    setSelectedMaterials(materials.filter((m) => value.includes(m.id)));
-    setVisible(false);
-  }, [value, materials]);
-
-  // 物料表格列配置
-  const columns: TableColumnsType<MaterialOption> = [
-    {
-      title: '物料名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (name: string, record) => (
-        <Space>
-          {record.imageUrl && (
-            <div style={{ position: 'relative', width: 40, height: 40, flexShrink: 0 }}>
-              <Image
-                src={record.imageUrl}
-                alt={name}
-                fill
-                sizes="40px"
-                style={{ objectFit: 'cover', borderRadius: 4 }}
-                unoptimized={record.imageUrl.startsWith('http')}
-              />
-            </div>
-          )}
-          <div>
-            <div>{name}</div>
-            {record.materialNo && (
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                {record.materialNo}
-              </Text>
-            )}
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: '分类',
-      dataIndex: 'categoryName',
-      key: 'categoryName',
-      width: 100,
-    },
-    {
-      title: '品牌',
-      dataIndex: 'brand',
-      key: 'brand',
-      width: 100,
-    },
-    {
-      title: '规格',
-      dataIndex: 'spec',
-      key: 'spec',
-      width: 100,
-    },
-    {
-      title: '单位',
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 60,
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 80,
-      render: (_, record) => {
-        const isSelected = selectedIds.includes(record.id);
-        return (
-          <Button
-            type={isSelected ? 'default' : 'primary'}
-            size="small"
-            onClick={() => handleSelectMaterial(record)}
-            disabled={!isSelected && maxCount !== undefined && selectedIds.length >= maxCount}
-          >
-            {isSelected ? '取消' : '选择'}
-          </Button>
-        );
-      },
-    },
-  ];
-
-  // 已选物料列表
-  const renderSelectedList = () => {
-    if (selectedMaterials.length === 0) {
-      return <Empty description="暂未选择物料" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
     }
 
-    return (
-      <div style={{ maxHeight: 300, overflow: 'auto' }}>
-        {selectedMaterials.map((material) => (
-          <div
-            key={material.id}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '8px 0',
-              borderBottom: '1px solid #f0f0f0',
-            }}
-          >
-            <Space>
-              <span>{material.name}</span>
-              {material.spec && <Tag>{material.spec}</Tag>}
-            </Space>
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleRemoveMaterial(material.id)}
-            />
-          </div>
-        ))}
+    setSelectedIds(newSelectedIds);
+    setSelectedMaterials(newSelectedMaterials);
+  };
+
+  // Remove material
+  const handleRemoveMaterial = (materialId: number) => {
+    setSelectedIds(selectedIds.filter((id) => id !== materialId));
+    setSelectedMaterials(selectedMaterials.filter((m) => m.id !== materialId));
+  };
+
+  // Confirm
+  const handleConfirm = () => {
+    onChange?.(selectedIds, selectedMaterials);
+    setOpen(false);
+  };
+
+  // Cancel
+  const handleCancel = () => {
+    setSelectedIds(value);
+    setSelectedMaterials(materials.filter((m) => value.includes(m.id)));
+    setOpen(false);
+  };
+
+  // Render category tree
+  const renderCategoryTree = (nodes: CategoryTreeNode[], level = 0) => {
+    return nodes.map((node) => (
+      <div key={node.id}>
+        <button
+          type="button"
+          className={cn(
+            "w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent",
+            selectedCategoryId === node.id && "bg-accent"
+          )}
+          style={{ paddingLeft: `${level * 12 + 8}px` }}
+          onClick={() => {
+            setSelectedCategoryId(node.id);
+            if (fetchMaterials) {
+              loadMaterials({ keyword: searchValue, categoryId: node.id });
+            }
+          }}
+        >
+          <Folder className="h-3 w-3 inline mr-1" />
+          {node.name}
+        </button>
+        {node.children && renderCategoryTree(node.children, level + 1)}
       </div>
-    );
+    ));
   };
 
   return (
     <>
-      <Button icon={<PlusOutlined />} onClick={() => setVisible(true)} disabled={disabled}>
+      <Button variant="outline" onClick={() => setOpen(true)} disabled={disabled}>
+        <Plus className="mr-2 h-4 w-4" />
         {triggerText}
-        {value.length > 0 && <Tag style={{ marginLeft: 8 }}>{value.length}</Tag>}
+        {value.length > 0 && (
+          <Badge variant="secondary" className="ml-2">
+            {value.length}
+          </Badge>
+        )}
       </Button>
 
-      <Modal
-        title={modalTitle}
-        open={visible}
-        onOk={handleConfirm}
-        onCancel={handleCancel}
-        width={1000}
-        okText="确认选择"
-        cancelText="取消"
-      >
-        <Row gutter={16}>
-          {/* 左侧分类树 */}
-          <Col span={6}>
-            <div
-              style={{
-                borderRight: '1px solid #f0f0f0',
-                paddingRight: 16,
-                height: 500,
-                overflow: 'auto',
-              }}
-            >
-              <Text strong style={{ marginBottom: 8, display: 'block' }}>
-                物料分类
-              </Text>
-              {categoryTree.length > 0 ? (
-                <Tree
-                  treeData={convertToTreeData(categoryTree)}
-                  onSelect={handleCategorySelect}
-                  selectedKeys={selectedCategoryId ? [selectedCategoryId] : []}
-                  defaultExpandAll
-                />
-              ) : (
-                <Empty description="暂无分类" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-              )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-5xl h-[600px] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{modalTitle}</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 grid grid-cols-12 gap-4 overflow-hidden">
+            {/* Category Tree */}
+            <div className="col-span-3 border-r pr-4">
+              <p className="text-sm font-medium mb-2">物料分类</p>
+              <ScrollArea className="h-[440px]">
+                {categoryTree.length > 0 ? (
+                  renderCategoryTree(categoryTree)
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    暂无分类
+                  </p>
+                )}
+              </ScrollArea>
             </div>
-          </Col>
 
-          {/* 中间物料列表 */}
-          <Col span={12}>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Input
-                placeholder="搜索物料名称/编号"
-                prefix={<SearchOutlined />}
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onPressEnter={handleSearch}
-                allowClear
-              />
-              <Spin spinning={loading}>
-                <Table
-                  dataSource={filteredMaterials}
-                  columns={columns}
-                  rowKey="id"
-                  size="small"
-                  pagination={{ pageSize: 10, size: 'small' }}
-                  scroll={{ y: 400 }}
+            {/* Material List */}
+            <div className="col-span-6 flex flex-col">
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="搜索物料名称/编号"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  className="pl-9"
                 />
-              </Spin>
-            </Space>
-          </Col>
+              </div>
+              <ScrollArea className="flex-1">
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>物料</TableHead>
+                        <TableHead>分类</TableHead>
+                        <TableHead>品牌</TableHead>
+                        <TableHead>规格</TableHead>
+                        <TableHead className="w-[80px]">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMaterials.map((material) => {
+                        const isSelected = selectedIds.includes(material.id);
+                        return (
+                          <TableRow key={material.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {material.imageUrl && (
+                                  <div className="relative w-10 h-10 rounded overflow-hidden bg-muted flex-shrink-0">
+                                    <Image
+                                      src={material.imageUrl}
+                                      alt={material.name}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-medium text-sm">
+                                    {material.name}
+                                  </p>
+                                  {material.materialNo && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {material.materialNo}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {material.categoryName}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {material.brand}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {material.spec}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant={isSelected ? "outline" : "default"}
+                                size="sm"
+                                onClick={() => handleSelectMaterial(material)}
+                                disabled={
+                                  !isSelected &&
+                                  maxCount !== undefined &&
+                                  selectedIds.length >= maxCount
+                                }
+                              >
+                                {isSelected ? "取消" : "选择"}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </ScrollArea>
+            </div>
 
-          {/* 右侧已选列表 */}
-          <Col span={6}>
-            <div style={{ borderLeft: '1px solid #f0f0f0', paddingLeft: 16 }}>
-              <Text strong style={{ marginBottom: 8, display: 'block' }}>
+            {/* Selected List */}
+            <div className="col-span-3 border-l pl-4">
+              <p className="text-sm font-medium mb-2">
                 已选物料 ({selectedMaterials.length}
-                {maxCount ? `/${maxCount}` : ''})
-              </Text>
-              {renderSelectedList()}
+                {maxCount ? `/${maxCount}` : ""})
+              </p>
+              <ScrollArea className="h-[440px]">
+                {selectedMaterials.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    暂未选择物料
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedMaterials.map((material) => (
+                      <div
+                        key={material.id}
+                        className="flex items-center justify-between py-2 border-b"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="text-sm truncate">
+                            {material.name}
+                          </span>
+                          {material.spec && (
+                            <Badge variant="outline" className="flex-shrink-0">
+                              {material.spec}
+                            </Badge>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 flex-shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleRemoveMaterial(material.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
             </div>
-          </Col>
-        </Row>
-      </Modal>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancel}>
+              取消
+            </Button>
+            <Button onClick={handleConfirm}>确认选择</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

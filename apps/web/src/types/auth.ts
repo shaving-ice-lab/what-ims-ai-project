@@ -24,6 +24,7 @@ export interface User {
   lastLoginAt?: string;
   permissions?: string[];
   displayName?: string;
+  isPrimary?: boolean;
 }
 
 export interface RoleInfo {

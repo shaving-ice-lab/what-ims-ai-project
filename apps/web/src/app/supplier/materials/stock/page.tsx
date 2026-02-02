@@ -1,27 +1,27 @@
-'use client';
+"use client";
 
-import { CheckCircleOutlined, CloseCircleOutlined, SearchOutlined } from '@ant-design/icons';
+import { StatCard, StatGrid } from "@/components/business/stat-card";
+import { SupplierLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
-  Button,
-  Card,
-  Col,
-  Input,
-  message,
-  Row,
-  Space,
-  Statistic,
-  Switch,
-  Table,
-  Tag,
-  Typography,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import React, { useState } from 'react';
-
-const { Title, Paragraph } = Typography;
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { showToast } from "@/lib/toast";
+import { CheckCircle, Package, PackageX, Search, XCircle } from "lucide-react";
+import * as React from "react";
 
 interface StockItem {
-  key: string;
   id: number;
   name: string;
   brand: string;
@@ -32,207 +32,245 @@ interface StockItem {
 }
 
 export default function SupplierStockPage() {
-  const [searchText, setSearchText] = useState('');
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [searchText, setSearchText] = React.useState("");
+  const [selectedRows, setSelectedRows] = React.useState<number[]>([]);
 
-  // 模拟库存数据
-  const [stockData, setStockData] = useState<StockItem[]>([
+  const [stockData, setStockData] = React.useState<StockItem[]>([
     {
-      key: '1',
       id: 1,
-      name: '金龙鱼大豆油',
-      brand: '金龙鱼',
-      spec: '5L/桶',
-      category: '粮油',
+      name: "金龙鱼大豆油",
+      brand: "金龙鱼",
+      spec: "5L/桶",
+      category: "粮油",
       inStock: true,
-      lastUpdated: '2024-01-29 10:00',
+      lastUpdated: "2024-01-29 10:00",
     },
     {
-      key: '2',
       id: 2,
-      name: '福临门花生油',
-      brand: '福临门',
-      spec: '5L/桶',
-      category: '粮油',
+      name: "福临门花生油",
+      brand: "福临门",
+      spec: "5L/桶",
+      category: "粮油",
       inStock: true,
-      lastUpdated: '2024-01-29 09:30',
+      lastUpdated: "2024-01-29 09:30",
     },
     {
-      key: '3',
       id: 3,
-      name: '中粮大米',
-      brand: '中粮',
-      spec: '10kg/袋',
-      category: '粮油',
+      name: "中粮大米",
+      brand: "中粮",
+      spec: "10kg/袋",
+      category: "粮油",
       inStock: true,
-      lastUpdated: '2024-01-28 16:00',
+      lastUpdated: "2024-01-28 16:00",
     },
     {
-      key: '4',
       id: 4,
-      name: '海天酱油',
-      brand: '海天',
-      spec: '500ml/瓶',
-      category: '调味品',
+      name: "海天酱油",
+      brand: "海天",
+      spec: "500ml/瓶",
+      category: "调味品",
       inStock: false,
-      lastUpdated: '2024-01-28 14:00',
+      lastUpdated: "2024-01-28 14:00",
     },
     {
-      key: '5',
       id: 5,
-      name: '太太乐鸡精',
-      brand: '太太乐',
-      spec: '200g/袋',
-      category: '调味品',
+      name: "太太乐鸡精",
+      brand: "太太乐",
+      spec: "200g/袋",
+      category: "调味品",
       inStock: true,
-      lastUpdated: '2024-01-27 11:00',
+      lastUpdated: "2024-01-27 11:00",
     },
   ]);
 
-  // 统计数据
   const inStockCount = stockData.filter((s) => s.inStock).length;
   const outOfStockCount = stockData.filter((s) => !s.inStock).length;
 
-  // 切换库存状态
   const handleToggleStock = (id: number, inStock: boolean) => {
     setStockData((prev) =>
       prev.map((item) =>
         item.id === id
-          ? { ...item, inStock, lastUpdated: new Date().toLocaleString('zh-CN') }
+          ? { ...item, inStock, lastUpdated: new Date().toLocaleString("zh-CN") }
           : item
       )
     );
-    message.success(`已设置为${inStock ? '有货' : '缺货'}`);
+    showToast.success(`已设置为${inStock ? "有货" : "缺货"}`);
   };
 
-  // 批量设置有货
   const handleBatchInStock = () => {
     setStockData((prev) =>
       prev.map((item) =>
-        selectedRowKeys.includes(item.key)
-          ? { ...item, inStock: true, lastUpdated: new Date().toLocaleString('zh-CN') }
+        selectedRows.includes(item.id)
+          ? { ...item, inStock: true, lastUpdated: new Date().toLocaleString("zh-CN") }
           : item
       )
     );
-    setSelectedRowKeys([]);
-    message.success(`已批量设置 ${selectedRowKeys.length} 个物料为有货`);
+    setSelectedRows([]);
+    showToast.success(`已批量设置 ${selectedRows.length} 个物料为有货`);
   };
 
-  // 批量设置缺货
   const handleBatchOutOfStock = () => {
     setStockData((prev) =>
       prev.map((item) =>
-        selectedRowKeys.includes(item.key)
-          ? { ...item, inStock: false, lastUpdated: new Date().toLocaleString('zh-CN') }
+        selectedRows.includes(item.id)
+          ? { ...item, inStock: false, lastUpdated: new Date().toLocaleString("zh-CN") }
           : item
       )
     );
-    setSelectedRowKeys([]);
-    message.success(`已批量设置 ${selectedRowKeys.length} 个物料为缺货`);
+    setSelectedRows([]);
+    showToast.success(`已批量设置 ${selectedRows.length} 个物料为缺货`);
   };
 
-  // 表格列定义
-  const columns: ColumnsType<StockItem> = [
-    { title: '物料名称', dataIndex: 'name', key: 'name' },
-    { title: '品牌', dataIndex: 'brand', key: 'brand' },
-    { title: '规格', dataIndex: 'spec', key: 'spec' },
-    {
-      title: '分类',
-      dataIndex: 'category',
-      key: 'category',
-      render: (c: string) => <Tag>{c}</Tag>,
-    },
-    {
-      title: '库存状态',
-      dataIndex: 'inStock',
-      key: 'inStock',
-      render: (inStock: boolean) => (
-        <Tag
-          color={inStock ? 'green' : 'red'}
-          icon={inStock ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-        >
-          {inStock ? '有货' : '缺货'}
-        </Tag>
-      ),
-    },
-    { title: '最后更新', dataIndex: 'lastUpdated', key: 'lastUpdated' },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <Switch
-          checked={record.inStock}
-          checkedChildren="有货"
-          unCheckedChildren="缺货"
-          onChange={(checked) => handleToggleStock(record.id, checked)}
-        />
-      ),
-    },
-  ];
-
-  // 过滤数据
   const filteredData = stockData.filter(
     (item) => item.name.includes(searchText) || item.brand.includes(searchText)
   );
 
+  const allSelected =
+    filteredData.length > 0 &&
+    selectedRows.length === filteredData.length;
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(filteredData.map((item) => item.id));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedRows((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
   return (
-    <div style={{ padding: 24 }}>
-      <Title level={3}>库存管理</Title>
-      <Paragraph type="secondary">快速管理物料库存状态</Paragraph>
-
-      {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col xs={12} sm={8}>
-          <Card size="small">
-            <Statistic title="有货物料" value={inStockCount} valueStyle={{ color: '#52c41a' }} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8}>
-          <Card size="small">
-            <Statistic title="缺货物料" value={outOfStockCount} valueStyle={{ color: '#ff4d4f' }} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8}>
-          <Card size="small">
-            <Statistic title="总物料数" value={stockData.length} />
-          </Card>
-        </Col>
-      </Row>
-
-      <Card>
-        {/* 工具栏 */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={12} md={8}>
-            <Input
-              placeholder="搜索物料"
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={12} md={16} style={{ textAlign: 'right' }}>
-            {selectedRowKeys.length > 0 && (
-              <Space>
-                <Button type="primary" onClick={handleBatchInStock}>
-                  批量设为有货 ({selectedRowKeys.length})
+    <SupplierLayout>
+      <WorkbenchShell
+        badge="库存管理"
+        title="库存管理"
+        description="快速管理物料库存状态"
+        toolbar={
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="搜索物料"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex-1" />
+            {selectedRows.length > 0 && (
+              <div className="flex gap-2">
+                <Button onClick={handleBatchInStock}>
+                  批量设为有货 ({selectedRows.length})
                 </Button>
-                <Button danger onClick={handleBatchOutOfStock}>
-                  批量设为缺货 ({selectedRowKeys.length})
+                <Button variant="destructive" onClick={handleBatchOutOfStock}>
+                  批量设为缺货 ({selectedRows.length})
                 </Button>
-              </Space>
+              </div>
             )}
-          </Col>
-        </Row>
+          </div>
+        }
+        results={
+          <div className="space-y-6 animate-fade-in">
+            {/* Stats */}
+            <StatGrid columns={3}>
+              <StatCard
+                title="有货物料"
+                value={inStockCount.toString()}
+                icon={Package}
+                valueClassName="text-[hsl(var(--success))]"
+              />
+              <StatCard
+                title="缺货物料"
+                value={outOfStockCount.toString()}
+                icon={PackageX}
+                valueClassName="text-[hsl(var(--error))]"
+              />
+              <StatCard
+                title="总物料数"
+                value={stockData.length.toString()}
+                icon={Package}
+              />
+            </StatGrid>
 
-        {/* 库存表格 */}
-        <Table
-          rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
-          dataSource={filteredData}
-          columns={columns}
-          pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 个物料` }}
-        />
-      </Card>
-    </div>
+            <Card className="overflow-hidden">
+              <CardContent className="pt-6">
+                {/* Table */}
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={allSelected}
+                            onCheckedChange={toggleSelectAll}
+                          />
+                        </TableHead>
+                        <TableHead>物料名称</TableHead>
+                        <TableHead>品牌</TableHead>
+                        <TableHead>规格</TableHead>
+                        <TableHead>分类</TableHead>
+                        <TableHead>库存状态</TableHead>
+                        <TableHead>最后更新</TableHead>
+                        <TableHead className="w-[100px]">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedRows.includes(item.id)}
+                              onCheckedChange={() => toggleSelect(item.id)}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell>{item.brand}</TableCell>
+                          <TableCell>{item.spec}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{item.category}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={item.inStock ? "success" : "error"}
+                              className="flex items-center gap-1 w-fit"
+                            >
+                              {item.inStock ? (
+                                <CheckCircle className="h-3 w-3" />
+                              ) : (
+                                <XCircle className="h-3 w-3" />
+                              )}
+                              {item.inStock ? "有货" : "缺货"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {item.lastUpdated}
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={item.inStock}
+                              onCheckedChange={(checked) =>
+                                handleToggleStock(item.id, checked)
+                              }
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                  <span>共 {filteredData.length} 个物料</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        }
+      />
+    </SupplierLayout>
   );
 }

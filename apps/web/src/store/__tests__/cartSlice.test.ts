@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import cartReducer, {
   addToCart,
   removeFromCart,
@@ -47,7 +47,7 @@ describe('cartSlice', () => {
       const state = cartReducer(initialState, addToCart(mockItem));
       
       expect(state.items[1]).toHaveLength(1);
-      expect(state.items[1][0].materialSkuId).toBe(100);
+      expect(state.items[1]?.[0]?.materialSkuId).toBe(100);
       expect(state.totalCount).toBe(2);
       expect(state.totalAmount).toBe(22); // 11 * 2
     });
@@ -68,7 +68,7 @@ describe('cartSlice', () => {
       const state = cartReducer(stateWithItem, addToCart(sameItem));
 
       expect(state.items[1]).toHaveLength(1);
-      expect(state.items[1][0].quantity).toBe(5); // 2 + 3
+      expect(state.items[1]?.[0]?.quantity).toBe(5); // 2 + 3
       expect(state.totalCount).toBe(5);
     });
 
@@ -99,7 +99,7 @@ describe('cartSlice', () => {
         })
       );
 
-      expect(state.items[1][0].quantity).toBe(5);
+      expect(state.items[1]?.[0]?.quantity).toBe(5);
       expect(state.totalCount).toBe(5);
       expect(state.totalAmount).toBe(55); // 11 * 5
     });
@@ -145,7 +145,7 @@ describe('cartSlice', () => {
         })
       );
 
-      expect(state.items[1][0].quantity).toBe(2); // unchanged
+      expect(state.items[1]?.[0]?.quantity).toBe(2); // unchanged
     });
   });
 
@@ -177,7 +177,7 @@ describe('cartSlice', () => {
       );
 
       expect(state.items[1]).toHaveLength(1);
-      expect(state.items[1][0].materialSkuId).toBe(200);
+      expect(state.items[1]?.[0]?.materialSkuId).toBe(200);
     });
 
     it('should remove supplier group when last item is removed', () => {

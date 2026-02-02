@@ -38,14 +38,15 @@ const cartSlice = createSlice({
         state.items[supplierId] = [];
       }
       
-      const existingItemIndex = state.items[supplierId].findIndex(
+      const supplierItems = state.items[supplierId]!;
+      const existingItemIndex = supplierItems.findIndex(
         item => item.materialSkuId === materialSkuId
       );
       
       if (existingItemIndex >= 0) {
-        state.items[supplierId][existingItemIndex].quantity += action.payload.quantity;
+        supplierItems[existingItemIndex]!.quantity += action.payload.quantity;
       } else {
-        state.items[supplierId].push(action.payload);
+        supplierItems.push(action.payload);
       }
       
       // Update totals

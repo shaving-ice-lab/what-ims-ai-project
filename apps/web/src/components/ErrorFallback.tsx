@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { HomeOutlined, ReloadOutlined } from '@ant-design/icons';
-import { Button, Result } from 'antd';
-import { useRouter } from 'next/navigation';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { AlertCircle, Home, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface ErrorFallbackProps {
   error?: Error | null;
@@ -25,67 +26,43 @@ export default function ErrorFallback({ error, onRetry }: ErrorFallbackProps) {
   };
 
   const handleGoHome = () => {
-    router.push('/');
+    router.push("/");
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '400px',
-        padding: '40px',
-      }}
-    >
-      <Result
-        status="error"
-        title="页面出错了"
-        subTitle={
-          process.env.NODE_ENV === 'development'
-            ? error?.message || '发生了未知错误'
-            : '抱歉，页面遇到了一些问题，请刷新重试'
-        }
-        extra={[
-          <Button
-            key="retry"
-            type="primary"
-            icon={<ReloadOutlined />}
-            onClick={handleRetry}
-          >
-            重新加载
-          </Button>,
-          <Button key="home" icon={<HomeOutlined />} onClick={handleGoHome}>
-            返回首页
-          </Button>,
-        ]}
-      >
-        {process.env.NODE_ENV === 'development' && error?.stack && (
-          <div
-            style={{
-              marginTop: '24px',
-              padding: '16px',
-              background: '#f5f5f5',
-              borderRadius: '8px',
-              textAlign: 'left',
-              overflow: 'auto',
-              maxHeight: '200px',
-            }}
-          >
-            <pre
-              style={{
-                margin: 0,
-                fontSize: '12px',
-                color: '#666',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-              }}
-            >
-              {error.stack}
-            </pre>
+    <div className="flex justify-center items-center min-h-[400px] p-10">
+      <Card className="max-w-md w-full">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center text-center">
+            <div className="rounded-full bg-destructive/10 p-4 mb-4">
+              <AlertCircle className="h-10 w-10 text-destructive" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">页面出错了</h2>
+            <p className="text-muted-foreground mb-4">
+              {process.env.NODE_ENV === "development"
+                ? error?.message || "发生了未知错误"
+                : "抱歉，页面遇到了一些问题，请刷新重试"}
+            </p>
+            {process.env.NODE_ENV === "development" && error?.stack && (
+              <div className="w-full mt-4 p-4 bg-muted rounded-lg text-left overflow-auto max-h-[200px]">
+                <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-all">
+                  {error.stack}
+                </pre>
+              </div>
+            )}
           </div>
-        )}
-      </Result>
+        </CardContent>
+        <CardFooter className="flex justify-center gap-3">
+          <Button onClick={handleRetry}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            重新加载
+          </Button>
+          <Button variant="outline" onClick={handleGoHome}>
+            <Home className="mr-2 h-4 w-4" />
+            返回首页
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

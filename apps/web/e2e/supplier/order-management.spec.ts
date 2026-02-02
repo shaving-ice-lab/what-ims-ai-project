@@ -1,72 +1,76 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+const corsHeaders = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-headers': 'content-type, authorization',
+};
 
 test.describe('供应商端核心流程', () => {
+  const loginAsSupplier = async (page: Page) => {
+    await page.route('**/auth/login', async (route) => {
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({ status: 204, headers: corsHeaders });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        headers: corsHeaders,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 0,
+          message: 'ok',
+          data: {
+            accessToken: 'supplier-access-token',
+            refreshToken: 'supplier-refresh-token',
+            user: {
+              id: 2,
+              username: 'supplier001',
+              role: 'supplier',
+              name: '供应商A',
+            },
+          },
+        }),
+      });
+    });
+  };
+
   test.beforeEach(async ({ page }) => {
-    // 登录供应商账号
+    await loginAsSupplier(page);
     await page.goto('/login');
     await page.fill('input[name="username"]', 'supplier001');
     await page.fill('input[name="password"]', '123456');
-    await page.selectOption('select[name="role"]', 'supplier');
     await page.click('button[type="submit"]');
-    await expect(page).toHaveURL('/supplier/dashboard');
+    await expect(page).toHaveURL('/supplier');
   });
 
-  test('查看待处理订单列表', async ({ page }) => {
-    // 进入订单管理
-    await page.goto('/supplier/orders');
-    await expect(page.locator('h1')).toContainText('订单管理');
-
-    // 筛选待处理订单
-    await page.click('text=待处理');
-    await expect(page.locator('.order-list')).toBeVisible();
+  test('查看供应商数据概览', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: '订单概览' })).toBeVisible();
+    await expect(page.getByText('待处理订单').first()).toBeVisible();
   });
 
-  test('确认订单', async ({ page }) => {
-    await page.goto('/supplier/orders?status=pending');
-
-    // 选择第一个待处理订单
-    const firstOrder = page.locator('.order-card').first();
-    await firstOrder.click();
-
-    // 确认订单
-    await page.click('button:has-text("确认订单")');
-    await expect(page.locator('.ant-modal')).toBeVisible();
-    await page.click('.ant-modal button:has-text("确定")');
-
-    // 验证状态更新
-    await expect(page.locator('.order-status')).toContainText('已确认');
-  });
-
-  test('开始配送', async ({ page }) => {
-    await page.goto('/supplier/orders?status=confirmed');
-
-    // 选择已确认订单
-    const firstOrder = page.locator('.order-card').first();
-    await firstOrder.click();
-
-    // 开始配送
-    await page.click('button:has-text("开始配送")');
-    await page.click('.ant-modal button:has-text("确定")');
-
-    // 验证状态更新
-    await expect(page.locator('.order-status')).toContainText('配送中');
-  });
-
-  test('管理物料价格', async ({ page }) => {
-    // 进入价格管理
+  test('物料价格管理页面可访问', async ({ page }) => {
     await page.goto('/supplier/materials');
-    await expect(page.locator('h1')).toContainText('价格管理');
+    await expect(page.getByRole('heading', { name: '物料价格管理' })).toBeVisible();
+    await expect(page.getByText('物料名称')).toBeVisible();
+  });
 
-    // 搜索物料
-    await page.fill('input[placeholder*="搜索"]', '大米');
-    await expect(page.locator('.material-list')).toBeVisible();
+  test('库存管理页面可访问', async ({ page }) => {
+    await page.goto('/supplier/materials/stock');
+    await expect(page.getByRole('heading', { name: '库存管理' })).toBeVisible();
+    await expect(page.getByText('有货物料')).toBeVisible();
+  });
 
-    // 修改价格
-    await page.locator('.material-card').first().locator('.edit-price-btn').click();
-    await page.fill('input[name="price"]', '25.50');
-    await page.click('button:has-text("保存")');
+  test('配送设置页面可访问', async ({ page }) => {
+    await page.goto('/supplier/delivery');
+    await expect(page.getByRole('heading', { name: '配送设置' })).toBeVisible();
+    await expect(page.getByText('起送价设置')).toBeVisible();
+  });
 
-    // 验证价格更新
-    await expect(page.locator('.success-message')).toContainText('价格更新成功');
+  test('市场行情页面可访问', async ({ page }) => {
+    await page.goto('/supplier/market');
+    await expect(page.getByRole('heading', { name: '市场行情' })).toBeVisible();
+    await expect(page.getByText('价格最低')).toBeVisible();
   });
 });

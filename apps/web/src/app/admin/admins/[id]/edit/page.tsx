@@ -1,110 +1,138 @@
-'use client';
+"use client";
 
+import { AdminLayout } from "@/components/layouts/app-layout";
+import { WorkbenchShell } from "@/components/layouts/workbench-shell";
 import {
-  Alert,
-  Button,
-  Card,
-  Checkbox,
-  Divider,
-  Form,
-  Input,
-  message,
-  Popconfirm,
-  Space,
-  Spin,
-  Typography,
-} from 'antd';
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import AdminLayout from '../../../../../components/layouts/AdminLayout';
+    Alert,
+    AlertDescription,
+    AlertTitle,
+} from "@/components/ui/alert";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { showToast } from "@/lib/toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Info, Loader2 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import * as React from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
-const { Title, Paragraph, Text } = Typography;
+const editAdminSchema = z.object({
+  name: z.string().min(1, "请输入姓名").max(20),
+  username: z.string(),
+  phone: z.string().regex(/^1[3-9]\d{9}$/, "请输入正确的手机号").optional().or(z.literal("")),
+  permissions: z.array(z.string()).min(1, "请选择至少一项权限"),
+});
 
-interface EditAdminForm {
-  name: string;
-  username: string;
-  phone?: string;
-  permissions: string[];
-}
+type EditAdminFormValues = z.infer<typeof editAdminSchema>;
+
+const permissionGroups = [
+  {
+    title: "订单相关",
+    permissions: [
+      { value: "order", label: "订单管理", desc: "查看和处理订单" },
+      { value: "order_cancel", label: "订单取消", desc: "审核取消申请" },
+    ],
+  },
+  {
+    title: "用户相关",
+    permissions: [
+      { value: "store", label: "门店管理", desc: "管理门店账号和信息" },
+      { value: "supplier", label: "供应商管理", desc: "管理供应商账号和信息" },
+    ],
+  },
+  {
+    title: "商品相关",
+    permissions: [
+      { value: "material", label: "物料管理", desc: "管理物料和分类" },
+      { value: "product_audit", label: "产品审核", desc: "审核供应商产品" },
+    ],
+  },
+  {
+    title: "财务相关",
+    permissions: [
+      { value: "markup", label: "加价管理", desc: "配置加价规则" },
+      { value: "report", label: "报表统计", desc: "查看统计报表" },
+    ],
+  },
+];
+
+const sensitivePermissions = ["payment_config", "api_config", "admin_manage"];
 
 export default function EditAdminPage() {
   const router = useRouter();
   const params = useParams();
   const adminId = params.id as string;
-  const [form] = Form.useForm<EditAdminForm>();
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = React.useState(false);
+  const [initialLoading, setInitialLoading] = React.useState(true);
 
-  // 权限选项
-  const permissionGroups = [
-    {
-      title: '订单相关',
-      permissions: [
-        { value: 'order', label: '订单管理', desc: '查看和处理订单' },
-        { value: 'order_cancel', label: '订单取消', desc: '审核取消申请' },
-      ],
+  const form = useForm<EditAdminFormValues>({
+    resolver: zodResolver(editAdminSchema),
+    defaultValues: {
+      name: "",
+      username: "",
+      phone: "",
+      permissions: [],
     },
-    {
-      title: '用户相关',
-      permissions: [
-        { value: 'store', label: '门店管理', desc: '管理门店账号和信息' },
-        { value: 'supplier', label: '供应商管理', desc: '管理供应商账号和信息' },
-      ],
-    },
-    {
-      title: '商品相关',
-      permissions: [
-        { value: 'material', label: '物料管理', desc: '管理物料和分类' },
-        { value: 'product_audit', label: '产品审核', desc: '审核供应商产品' },
-      ],
-    },
-    {
-      title: '财务相关',
-      permissions: [
-        { value: 'markup', label: '加价管理', desc: '配置加价规则' },
-        { value: 'report', label: '报表统计', desc: '查看统计报表' },
-      ],
-    },
-  ];
+  });
 
-  // 敏感权限（子管理员不可选）
-  const sensitivePermissions = ['payment_config', 'api_config', 'admin_manage'];
-
-  // 加载管理员数据
-  useEffect(() => {
+  React.useEffect(() => {
     const loadAdminData = async () => {
       setInitialLoading(true);
       try {
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        // 模拟数据
-        const mockData: Record<string, EditAdminForm> = {
-          '2': {
-            name: '运营管理员',
-            username: 'operator',
-            phone: '139****9999',
-            permissions: ['order', 'store', 'supplier'],
+        const mockData: Record<string, EditAdminFormValues> = {
+          "2": {
+            name: "运营管理员",
+            username: "operator",
+            phone: "139****9999",
+            permissions: ["order", "store", "supplier"],
           },
-          '3': {
-            name: '财务管理员',
-            username: 'finance',
-            phone: '137****7777',
-            permissions: ['order', 'report', 'markup'],
+          "3": {
+            name: "财务管理员",
+            username: "finance",
+            phone: "137****7777",
+            permissions: ["order", "report", "markup"],
           },
-          '4': {
-            name: '客服管理员',
-            username: 'support',
-            phone: '',
-            permissions: ['order', 'store'],
+          "4": {
+            name: "客服管理员",
+            username: "support",
+            phone: "",
+            permissions: ["order", "store"],
           },
         };
 
-        const data = mockData[adminId] ?? mockData['2'];
+        const data = mockData[adminId] ?? mockData["2"];
         if (data) {
-          form.setFieldsValue(data);
+          form.reset(data);
         }
       } catch {
-        message.error('加载数据失败');
+        showToast.error("加载数据失败");
       } finally {
         setInitialLoading(false);
       }
@@ -113,147 +141,274 @@ export default function EditAdminPage() {
     loadAdminData();
   }, [adminId, form]);
 
-  // 提交表单
-  const handleSubmit = async (values: EditAdminForm) => {
+  const onSubmit = async (values: EditAdminFormValues) => {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log('Updating admin:', values);
-      message.success('管理员信息更新成功');
-      router.push('/admin/admins');
+      console.log("Updating admin:", values);
+      showToast.success("管理员信息更新成功");
+      router.push("/admin/admins");
     } catch {
-      message.error('更新失败，请重试');
+      showToast.error("更新失败，请重试");
     } finally {
       setLoading(false);
     }
   };
 
-  // 重置密码
   const handleResetPassword = async () => {
-    message.success('密码已重置为默认密码：123456');
+    showToast.success("密码已重置为默认密码：123456");
   };
 
-  // 禁用管理员
   const handleDisable = async () => {
-    message.success('管理员已禁用');
-    router.push('/admin/admins');
+    showToast.success("管理员已禁用");
+    router.push("/admin/admins");
   };
 
   if (initialLoading) {
     return (
       <AdminLayout>
-        <div style={{ textAlign: 'center', padding: '100px 0' }}>
-          <Spin size="large" />
-          <div style={{ marginTop: 16 }}>加载中...</div>
-        </div>
+        <WorkbenchShell
+          badge="管理员管理"
+          title="编辑子管理员"
+          description="加载管理员信息中..."
+          results={
+            <div className="max-w-2xl space-y-6">
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-72" />
+              </div>
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+          }
+        />
       </AdminLayout>
     );
   }
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: 800 }}>
-        <Title level={3}>编辑子管理员</Title>
-        <Paragraph type="secondary">修改管理员信息和权限配置，ID: {adminId}</Paragraph>
+      <WorkbenchShell
+        badge="管理员管理"
+        title="编辑子管理员"
+        description={`修改管理员信息和权限配置，ID: ${adminId}`}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/admin/admins")}
+          >
+            返回列表
+          </Button>
+        }
+        results={
+          <div className="max-w-2xl space-y-6 animate-fade-in">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Basic Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">基本信息</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>姓名</FormLabel>
+                          <FormControl>
+                            <Input placeholder="请输入管理员姓名" maxLength={20} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>登录账号</FormLabel>
+                          <FormControl>
+                            <Input disabled {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>手机号</FormLabel>
+                          <FormControl>
+                            <Input placeholder="请输入手机号（可选）" maxLength={11} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
 
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          {/* 基本信息 */}
-          <Card title="基本信息" style={{ marginBottom: 24 }}>
-            <Form.Item name="name" label="姓名" rules={[{ required: true, message: '请输入姓名' }]}>
-              <Input placeholder="请输入管理员姓名" maxLength={20} />
-            </Form.Item>
+                {/* Permissions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">权限分配</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>权限说明</AlertTitle>
+                      <AlertDescription>
+                        子管理员无法获得支付配置、API配置、管理员管理等敏感权限
+                      </AlertDescription>
+                    </Alert>
 
-            <Form.Item name="username" label="登录账号">
-              <Input disabled />
-            </Form.Item>
+                    <FormField
+                      control={form.control}
+                      name="permissions"
+                      render={() => (
+                        <FormItem>
+                          {permissionGroups.map((group, groupIndex) => (
+                            <div key={groupIndex} className="space-y-3">
+                              <FormLabel className="text-sm font-medium">
+                                {group.title}
+                              </FormLabel>
+                              <div className="ml-4 space-y-2">
+                                {group.permissions.map((perm) => (
+                                  <FormField
+                                    key={perm.value}
+                                    control={form.control}
+                                    name="permissions"
+                                    render={({ field }) => {
+                                      return (
+                                        <FormItem
+                                          key={perm.value}
+                                          className="flex items-start space-x-3 space-y-0"
+                                        >
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value?.includes(perm.value)}
+                                              onCheckedChange={(checked) => {
+                                                return checked
+                                                  ? field.onChange([...field.value, perm.value])
+                                                  : field.onChange(
+                                                      field.value?.filter(
+                                                        (value) => value !== perm.value
+                                                      )
+                                                    );
+                                              }}
+                                            />
+                                          </FormControl>
+                                          <div className="space-y-0 leading-none">
+                                            <FormLabel className="font-normal cursor-pointer">
+                                              {perm.label}
+                                            </FormLabel>
+                                            <FormDescription>
+                                              {perm.desc}
+                                            </FormDescription>
+                                          </div>
+                                        </FormItem>
+                                      );
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                              {groupIndex < permissionGroups.length - 1 && (
+                                <Separator className="my-4" />
+                              )}
+                            </div>
+                          ))}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-            <Form.Item
-              name="phone"
-              label="手机号"
-              rules={[{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' }]}
-            >
-              <Input placeholder="请输入手机号（可选）" maxLength={11} />
-            </Form.Item>
-          </Card>
-
-          {/* 权限分配 */}
-          <Card title="权限分配" style={{ marginBottom: 24 }}>
-            <Alert
-              message="权限说明"
-              description="子管理员无法获得支付配置、API配置、管理员管理等敏感权限"
-              type="info"
-              style={{ marginBottom: 24 }}
-            />
-
-            <Form.Item name="permissions">
-              <Checkbox.Group style={{ width: '100%' }}>
-                {permissionGroups.map((group, groupIndex) => (
-                  <div key={groupIndex} style={{ marginBottom: 16 }}>
-                    <Text strong>{group.title}</Text>
-                    <div style={{ marginTop: 8, marginLeft: 16 }}>
-                      {group.permissions.map((perm) => (
-                        <div key={perm.value} style={{ marginBottom: 8 }}>
-                          <Checkbox value={perm.value}>
-                            {perm.label}
-                            <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                              {perm.desc}
-                            </Text>
-                          </Checkbox>
-                        </div>
+                    <div className="text-sm text-muted-foreground">
+                      敏感权限（不可选）：
+                      {sensitivePermissions.map((p) => (
+                        <span key={p} className="ml-2 line-through">
+                          {p}
+                        </span>
                       ))}
                     </div>
-                    {groupIndex < permissionGroups.length - 1 && <Divider />}
-                  </div>
-                ))}
-              </Checkbox.Group>
-            </Form.Item>
+                  </CardContent>
+                </Card>
 
-            <div style={{ marginTop: 16 }}>
-              <Text type="secondary">
-                敏感权限（不可选）：
-                {sensitivePermissions.map((p) => (
-                  <Text key={p} delete style={{ marginLeft: 8 }}>
-                    {p}
-                  </Text>
-                ))}
-              </Text>
-            </div>
-          </Card>
+                {/* Account Actions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">账号操作</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-4">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline">重置密码</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>重置密码</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              确定要重置该管理员的密码吗？密码将被重置为默认密码。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleResetPassword}>
+                              确定
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
 
-          {/* 账号操作 */}
-          <Card title="账号操作" style={{ marginBottom: 24 }}>
-            <Space>
-              <Popconfirm
-                title="重置密码"
-                description="确定要重置该管理员的密码吗？"
-                onConfirm={handleResetPassword}
-                okText="确定"
-                cancelText="取消"
-              >
-                <Button>重置密码</Button>
-              </Popconfirm>
-              <Popconfirm
-                title="禁用管理员"
-                description="确定要禁用该管理员吗？禁用后该账号将无法登录"
-                onConfirm={handleDisable}
-                okText="确定"
-                cancelText="取消"
-              >
-                <Button danger>禁用账号</Button>
-              </Popconfirm>
-            </Space>
-          </Card>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive">禁用账号</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>禁用管理员</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              确定要禁用该管理员吗？禁用后该账号将无法登录。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDisable}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              确定禁用
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </CardContent>
+                </Card>
 
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                保存修改
-              </Button>
-              <Button onClick={() => router.back()}>取消</Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </div>
+                <div className="flex gap-4">
+                  <Button type="submit" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    保存修改
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => router.back()}>
+                    取消
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </div>
+        }
+      />
     </AdminLayout>
   );
 }

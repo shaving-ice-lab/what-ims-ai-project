@@ -1,6 +1,6 @@
+import { message } from '@/lib/toast';
 import { store } from '@/store';
 import { logout, updateToken } from '@/store/slices/authSlice';
-import { message } from '@/utils/antdStatic';
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // API响应包装

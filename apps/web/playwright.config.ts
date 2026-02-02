@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:16001';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -11,32 +13,40 @@ export default defineConfig({
     ['json', { outputFile: 'test-results.json' }],
   ],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-  ],
+  projects:
+    process.env.PLAYWRIGHT_FULL === 'true'
+      ? [
+          {
+            name: 'chromium',
+            use: { ...devices['Desktop Chrome'] },
+          },
+          {
+            name: 'firefox',
+            use: { ...devices['Desktop Firefox'] },
+          },
+          {
+            name: 'webkit',
+            use: { ...devices['Desktop Safari'] },
+          },
+          {
+            name: 'Mobile Chrome',
+            use: { ...devices['Pixel 5'] },
+          },
+        ]
+      : [
+          {
+            name: 'chromium',
+            use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+          },
+        ],
   webServer: {
     command: 'pnpm run dev',
-    url: 'http://localhost:3000',
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

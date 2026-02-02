@@ -1,10 +1,18 @@
+import ErrorBoundary from "@/components/ErrorBoundary";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import ErrorBoundary from "@/components/ErrorBoundary";
 
-const inter = Inter({ subsets: ["latin"] });
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: "供应链订货系统",
@@ -17,8 +25,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
-      <body className={inter.className}>
+    <html lang="zh-CN" suppressHydrationWarning>
+      <body
+        className={`${spaceGrotesk.variable} ${jetBrainsMono.variable} font-sans antialiased`}
+      >
         <ErrorBoundary>
           <Providers>{children}</Providers>
         </ErrorBoundary>

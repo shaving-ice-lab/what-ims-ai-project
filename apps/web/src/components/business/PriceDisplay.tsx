@@ -1,16 +1,14 @@
-'use client';
+"use client";
 
 /**
  * PriceDisplay - 价格显示组件
  * 显示原价/现价、加价金额高亮、划线价
  */
 
-import { CaretUpOutlined } from '@ant-design/icons';
-import { Space, Typography } from 'antd';
-import Decimal from 'decimal.js';
-import React from 'react';
-
-const { Text } = Typography;
+import { cn } from "@/lib/utils";
+import Decimal from "decimal.js";
+import { TrendingUp } from "lucide-react";
+import * as React from "react";
 
 export interface PriceDisplayProps {
   /** 当前价格 */
@@ -24,11 +22,13 @@ export interface PriceDisplayProps {
   /** 价格单位 */
   unit?: string;
   /** 尺寸 */
-  size?: 'small' | 'default' | 'large';
+  size?: "small" | "default" | "large";
   /** 是否显示货币符号 */
   showCurrency?: boolean;
   /** 货币符号 */
   currency?: string;
+  /** 额外类名 */
+  className?: string;
 }
 
 const PriceDisplay: React.FC<PriceDisplayProps> = ({
@@ -37,9 +37,10 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
   markupAmount,
   showMarkupIcon = true,
   unit,
-  size = 'default',
+  size = "default",
   showCurrency = true,
-  currency = '¥',
+  currency = "¥",
+  className,
 }) => {
   const formatPrice = (value: number | string) => {
     const num = new Decimal(value).toFixed(2);
@@ -50,54 +51,64 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
   const hasOriginalPrice =
     originalPrice && new Decimal(originalPrice).greaterThan(new Decimal(price));
 
-  const fontSizeMap = {
-    small: 12,
-    default: 14,
-    large: 18,
+  const sizeClasses = {
+    small: "text-sm",
+    default: "text-base",
+    large: "text-xl",
   };
 
-  const fontSize = fontSizeMap[size];
+  const smallerSizeClasses = {
+    small: "text-xs",
+    default: "text-sm",
+    large: "text-base",
+  };
 
   return (
-    <Space size={4} align="baseline">
+    <div className={cn("flex items-baseline gap-1 flex-wrap", className)}>
       {/* 当前价格 */}
-      <Text
-        strong
-        style={{
-          fontSize: fontSize + 2,
-          color: '#ff4d4f',
-        }}
+      <span
+        className={cn(
+          "font-semibold text-[hsl(var(--error))]",
+          sizeClasses[size]
+        )}
       >
         {formatPrice(price)}
-      </Text>
+      </span>
 
       {/* 单位 */}
       {unit && (
-        <Text type="secondary" style={{ fontSize: fontSize - 2 }}>
+        <span
+          className={cn("text-muted-foreground", smallerSizeClasses[size])}
+        >
           /{unit}
-        </Text>
+        </span>
       )}
 
       {/* 加价标识 */}
       {hasMarkup && showMarkupIcon && (
-        <Text
-          style={{
-            fontSize: fontSize - 2,
-            color: '#52c41a',
-          }}
+        <span
+          className={cn(
+            "text-[hsl(var(--success))] flex items-center gap-0.5",
+            smallerSizeClasses[size]
+          )}
         >
-          <CaretUpOutlined />
+          <TrendingUp className="h-3 w-3" />
           {formatPrice(markupAmount)}
-        </Text>
+        </span>
       )}
 
       {/* 划线价（原价） */}
       {hasOriginalPrice && (
-        <Text delete type="secondary" style={{ fontSize: fontSize - 2 }}>
+        <span
+          className={cn(
+            "text-muted-foreground line-through",
+            smallerSizeClasses[size]
+          )}
+        >
           {formatPrice(originalPrice)}
-        </Text>
+        </span>
       )}
-    </Space>
+    </div>
   );
 };
 
